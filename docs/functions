@@ -1,0 +1,12 @@
+POSIX functions:
+	fork, execve, dup2, wait/waitpid
+	gai_strerror - converts to human readable error from API function getaddrinfo
+	getaddrinfo - converts string literals to hints for creating an address for socket
+	freeaddrinfo - free out the address structure used in getaddrinfo
+	socketpair - replacement for pipe in forked process
+	epoll - puts socket to monitor loop.
+	bind - binds socket to addr:port;
+	socket - creates socket from addr:port;
+	listen - listens a socket;
+	accept - opens new socket per client;
+
