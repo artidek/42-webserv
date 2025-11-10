@@ -1,0 +1,127 @@
+#include "../includes/serverConfig.hpp"
+#include <sys/types.h>
+#include <dirent.h>
+#include <algorithm>
+#include <unistd.h>
+
+const std::map<std::string, std::string> serverConfig::env = serverConfig::makeEnv();
+static const unsigned short initErrors[] = {400,401,402,403,404,500,501,502};
+const std::vector<unsigned short> serverConfig::errorCodes(initErrors,initErrors + sizeof(initErrors)/sizeof(initErrors[0]));
+
+std::map<std::string, std::string> serverConfig::makeEnv(void)
+{
+	std::map<std::string, std::string> m;
+	m["Accept"] = "HTTP_ACCEPT";
+	m["User-Agent"] = "HTTP_USER_AGENT";
+	m["Referer"] = "HTTP_REFERER";
+	m["Authorization"] = "HTTP_AUTHORIZATION";
+	m["From"] = "HTTP_FROM";
+	m["If-Modified-Since"] = "HTTP_IF_MODIFIED_SINCE";
+	m["Content-Type"] = "CONTENT_TYPE";
+	m["Content-Length"] = "CONTENT_LENGTH";
+	return m;
+}
+
+serverConfig::serverConfig(void) {}
+
+serverConfig& serverConfig::operator=(serverConfig const &copy)
+{
+	if (this != &copy)
+	{
+		locations = copy.getLocations();
+		routes = copy.getRoutes();
+		errorPages = copy.getErrorPages();
+		host = copy.getHost();
+		cgiConf = copy.getCgiConf();
+	}
+	
+	return *this;
+}
+
+serverConfig::~serverConfig(void) {}
+
+void serverConfig::addLocation(std::string key, t_location loc)
+{
+	DIR *dr;
+
+	if (key.empty())
+		throw errorHandler(INVALID_INSTRUCTION, "empty location");
+	dr = opendir(key.c_str());
+	if (dr)
+		closedir(dr);
+	else
+		throw errorHandler(INVALID_INSTRUCTION, key);
+	
+	locations[key] = loc;
+}
+
+void serverConfig::addRoute(std::string key, t_route route)
+{
+	if (key.empty())
+		throw errorHandler(INVALID_INSTRUCTION, "empty route");
+	if (key[0] != '/')
+		throw errorHandler(INVALID_INSTRUCTION, key);
+	
+	routes[key] = route;
+}
+
+void serverConfig::setHost(t_host newHost) {host = newHost;}
+
+void serverConfig::addErrorPages(unsigned short error, std::string page)
+{
+	std::stringstream ss;
+	std::string err;
+	if (std::find(errorCodes.begin(), errorCodes.end(), error) == errorCodes.end())
+	{
+		ss << "error code " << error;
+		ss >> err;
+		throw errorHandler(INVALID_INSTRUCTION, err);
+	}	
+	
+	if (access(page.c_str(), R_OK) < 0)
+		throw errorHandler(WRONG_FILE, page);
+
+	errorPages[error] = page;
+}
+
+t_route serverConfig::getRoute(std::string route) const
+{
+	std::string err;
+	std::map<std::string, t_route>::const_iterator res;
+
+	err = "route " + route;
+	res = routes.find(route);
+	if (res == routes.end())
+		throw errorHandler(NO_DATA, err);
+	
+	return res->second;
+}
+
+std::map<std::string, std::string>serverConfig::getEnv(void) const {return env;}
+
+t_cgi serverConfig::getCgiConf(void) const {return cgiConf;}
+
+t_host serverConfig::getHost(void) const {return host;}
+
+std::map<std::string, t_location> serverConfig::getLocations(void) const {return locations;}
+
+std::map<std::string, t_route> serverConfig::getRoutes(void) const {return routes;}
+
+std::map<unsigned short, std::string> serverConfig::getErrorPages(void) const {return errorPages;}
+
+std::string serverConfig::getErrorPage(unsigned short error) const {
+
+	std::stringstream ss;
+	std::string err;
+	std::map<unsigned short, std::string>::const_iterator res;
+
+	res = errorPages.find(error);
+	if (res == errorPages.end())
+	{
+		ss << "error code " << error;
+		ss >> err;
+		throw errorHandler(NO_DATA, err);
+	}
+
+	return res->second;
+}
