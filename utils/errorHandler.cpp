@@ -6,23 +6,23 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:37 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/10 20:50:27 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/11 20:19:45 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/errorHandler.hpp"
 
-std::vector<std::string> errorHandler::errHead = {"Error: Missing token", "Error: Invalid instruction", "Error: Invalid file", "Error: No data available"};
+std::string errorHandler::errHead[] = {"Error: Missing token", "Error: Invalid instruction", "Error: Invalid file", "Error: No data available", "Error: Wrong extension", "Error: Empty config not allowed", "Error: Missing property in", "Error: Wrong token"};
 
 errorHandler::errorHandler(int errType, std::string err)
 {
-	std::stringstream ss(errHead[errType]);
-	ss << " => " << err;
-	ss >> msg;
+	msg = errHead[errType] + " => " + err;
 }
+
+errorHandler::errorHandler(int errTp) { msg = errHead[errTp];}
 
 errorHandler::errorHandler(std::string err) : msg(err) {}
 
-errorHandler::~errorHandler(void) {}
+errorHandler::~errorHandler(void) throw() {}
 
 const char *errorHandler::what(void) const throw() { return msg.c_str(); }

@@ -24,6 +24,8 @@ std::map<std::string, std::string> serverConfig::makeEnv(void)
 
 serverConfig::serverConfig(void) {}
 
+serverConfig::serverConfig(serverConfig const &copy) : locations(copy.getLocations()), routes(copy.getRoutes()), errorPages(copy.getErrorPages()), host(copy.getHost()), cgiConf(copy.getCgiConf()){}
+
 serverConfig& serverConfig::operator=(serverConfig const &copy)
 {
 	if (this != &copy)
@@ -73,8 +75,9 @@ void serverConfig::addErrorPages(unsigned short error, std::string page)
 	std::string err;
 	if (std::find(errorCodes.begin(), errorCodes.end(), error) == errorCodes.end())
 	{
-		ss << "error code " << error;
-		ss >> err;
+		err = "error code ";
+		ss << error;
+		err += ss.str();
 		throw errorHandler(INVALID_INSTRUCTION, err);
 	}	
 	
@@ -118,8 +121,9 @@ std::string serverConfig::getErrorPage(unsigned short error) const {
 	res = errorPages.find(error);
 	if (res == errorPages.end())
 	{
-		ss << "error code " << error;
-		ss >> err;
+		err = "error code ";
+		ss << error;
+		err += ss.str();
 		throw errorHandler(NO_DATA, err);
 	}
 

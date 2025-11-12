@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:09 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/10 20:49:52 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/11 20:19:16 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,18 +25,23 @@ enum {
 	MISSING_TOKEN,
 	INVALID_INSTRUCTION,
 	WRONG_FILE,
-	NO_DATA
+	NO_DATA,
+	WRONG_EXT,
+	CONFIG_EMPTY,
+	MISSING_PROPERTY,
+	WRONG_TOKEN
 };
 
 class errorHandler : public std::exception
 {
 	private:
-		static std::vector<std::string> errHead;
+		static std::string errHead[];
 		std::string msg;
 	public:
+		errorHandler(int errTp);
 		errorHandler(int errType, std::string err);
 		errorHandler(std::string err);
-		virtual ~errorHandler();
+		~errorHandler() throw();
 		const char *what() const throw();
 };
 

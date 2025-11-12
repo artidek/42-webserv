@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/10 21:31:36 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/11 21:41:18 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,10 +67,10 @@ class serverConfig
 		static const std::map<std::string, std::string>env;
 		static const std::vector<unsigned short>errorCodes;
 		t_cgi cgiConf;
-		serverConfig(serverConfig const &copy);
 		static std::map<std::string, std::string> makeEnv(void);
 	public:
 		serverConfig(void);
+		serverConfig(serverConfig const &copy);
 		serverConfig &operator=(serverConfig const &copy);
 		~serverConfig(void);
 		void addLocation(std::string key, t_location loc);

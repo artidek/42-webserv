@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/10 14:15:29 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/12 11:33:02 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,35 +16,30 @@
 #define CONFIG_PARSER_H
 
 #include "serverConfig.hpp"
-#include <deque>
+#include <stack>
 
 class configParser
 {
 	private:
-		serverConfig sc;
-		std::vector<t_host> hosts;
-		std::deque<std::string> tokens;
-		std::string flattened;
-		t_host host;
-		t_location loc;
-		t_route route;
-		bool blockEnd;
+		static std::stack<std::string> tokens;
+		static std::string flattened;
+		static bool blockEnd;
 		static std::vector<std::string> langBlocks;
 		static std::vector<std::string> langBlockLocation;
 		configParser(void);
 		configParser(configParser const &copy);
 		configParser &operator=(configParser const &copy);
 		~configParser(void);
-		void flatten(std::string confFile);
-		void tokenize(void);
-		void fillBlocks(void);
-		void fillHostConf(void);
-		void fillErrPg(void);
-		void fillRoute(void);
-		void fillLoc(void);
-		void fillCgiConf(void);
+		static void flatten(std::ifstream const &file);
+		static void tokenize(void);
+		static void fillHostConf(void);
+		static void fillErrPg(void);
+		static void fillRoute(void);
+		static void fillLoc(void);
+		static void fillCgiConf(void);
+		static void listToken(int &i);
 	public:
-		
+		static std::vector<serverConfig> parseConfig(std::string confFile);
 };
 
 #endif
