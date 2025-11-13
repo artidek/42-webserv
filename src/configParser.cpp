@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include "../includes/configUtils.hpp"
+#include "../includes/configHandler.hpp"
 
 std::stack<std::string> configParser::tokens;
 std::vector<serverConfig> configParser::hosts;
@@ -10,27 +12,6 @@ std::map<std::string,
 std::string configParser::flattened;
 std::string configParser::blockProp;
 bool configParser::blockEnd = false;
-
-bool	isCurlBr(unsigned char c)
-{
-	if (c == '{' || c == '}')
-		return (true);
-	return (false);
-}
-
-void	checkExt(std::string confFile)
-{
-	std::stringstream ss(confFile);
-	std::string name, extension;
-	if (std::getline(ss, name, '.') && std::getline(ss, extension))
-	{
-		if (extension == "conf")
-			return ;
-		else
-			throw errorHandler(WRONG_EXT, extension);
-	}
-	throw errorHandler(WRONG_EXT, "");
-}
 
 void configParser::flatten(std::ifstream const &file)
 {
@@ -80,7 +61,7 @@ void configParser::tokenize(void)
 	{
 		for (int i = 0; flattened[i]; i++)
 		{
-			if (isCurlBr(flattened[i]) && token.empty())
+			if (configUtils::isCurlBr(flattened[i]) && token.empty())
 			{
 				token += flattened[i];
 				tokens.push(token);
@@ -96,7 +77,7 @@ void configParser::tokenize(void)
 			}
 			else if(flattened[i] == ']')
 				throw errorHandler(MISSING_TOKEN, "[");
-			else if (!isspace(static_cast<unsigned char>(flattened[i])) && !isCurlBr(flattened[i]))
+			else if (!isspace(static_cast<unsigned char>(flattened[i])) && !configUtils::isCurlBr(flattened[i]))
 				token += flattened[i];
 			else if (isspace(static_cast<unsigned char>(flattened[i]))
 				&& !token.empty())
@@ -132,36 +113,6 @@ void configParser::startBlock(void)
 		}
 	}
 	throw errorHandler(MISSING_TOKEN, "}");
-}
-
-void configParser::fillHostConf(std::stack<std::string> &blockTokens)
-{
-	while(!blockTokens.empty())
-		blockTokens.pop();
-}
-
-void configParser::fillErrPg(std::stack<std::string> &blockTokens)
-{
-	while(!blockTokens.empty())
-		blockTokens.pop();
-}
-
-void configParser::fillRoute(std::stack<std::string> &blockTokens)
-{
-	while(!blockTokens.empty())
-		blockTokens.pop();
-}
-
-void configParser::fillLoc(std::stack<std::string> &blockTokens)
-{
-	while(!blockTokens.empty())
-		blockTokens.pop();
-}
-
-void configParser::fillCgiConf(std::stack<std::string> &blockTokens)
-{
-	while(!blockTokens.empty())
-		blockTokens.pop();
 }
 
 void configParser::checkBlock(std::stack<std::string> &blockTokens)
@@ -275,25 +226,28 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
 
 void configParser::initBlockNames(void)
 {
-	blockNames["host_configs"] = fillHostConf;
-	blockNames["error_pages"] = fillErrPg;
-	blockNames["route"] = fillRoute;
-	blockNames["cgi_config"] = fillCgiConf;
-	blockNames["location"] = fillLoc;
+	blockNames["host_configs"] = configHandler::fillHostConf;
+	blockNames["error_pages"] = configHandler::fillErrPg;
+	blockNames["route"] = configHandler::fillRoute;
+	blockNames["cgi_config"] = configHandler::fillCgiConf;
+	blockNames["location"] = configHandler::fillLoc;
 }
 
 void configParser::parseConfig(std::string confFile)
 {
 	try
 	{
-		checkExt(confFile);
+		configUtils::checkExt(confFile);
 		std::ifstream file(confFile.c_str());
 		if (file.fail())
 			throw errorHandler(WRONG_FILE, confFile);
 		flatten(file);
 		tokenize();
 		while (!tokens.empty())
+		{
 			parseBlock();
+			hosts.push_back(configHandler::getHost());
+		}
 	}
 	catch (const std::exception &e)
 	{
