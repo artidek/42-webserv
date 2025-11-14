@@ -4,8 +4,8 @@ CPPFLAGS = -std=c++98 -Wall -Wextra -Werror -g
 SRCPATH = src/
 UTILSPATH = utils/
 
-SRC = $(SRCPATH)configParser.cpp $(SRCPATH)serverConfig.cpp
-UTILS = $(UTILSPATH)errorHandler.cpp
+SRC = $(SRCPATH)configParser.cpp $(SRCPATH)serverConfig.cpp configHandler.cpp
+UTILS = $(UTILSPATH)errorHandler.cpp configUtils.cpp
 
 SRCOBJS = $(patsubst %.cpp, ./objs/%.o, $(notdir $(SRC)))
 UTILSOBJS = $(patsubst %.cpp, ./objs/%.o, $(notdir $(UTILS)))

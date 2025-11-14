@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/11 21:41:18 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/14 11:58:29 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,6 @@ class serverConfig
 		std::map<unsigned short, std::string>errorPages;
 		t_host host;
 		static const std::map<std::string, std::string>env;
-		static const std::vector<unsigned short>errorCodes;
 		t_cgi cgiConf;
 		static std::map<std::string, std::string> makeEnv(void);
 	public:

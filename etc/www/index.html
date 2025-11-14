@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Server Status</title>
+  <style>
+    /* Body styling */
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #ff9a76, #ff6f91);
+      font-family: 'Arial', sans-serif;
+      color: white;
+      text-align: center;
+      position: relative;
+    }
+
+    /* Floating circles in background */
+    .circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      animation: float 10s linear infinite;
+    }
+
+    /* Different sizes and positions */
+    .circle:nth-child(1) { width: 100px; height: 100px; top: 10%; left: 20%; animation-duration: 12s; }
+    .circle:nth-child(2) { width: 150px; height: 150px; top: 40%; left: 70%; animation-duration: 15s; }
+    .circle:nth-child(3) { width: 80px; height: 80px; top: 70%; left: 30%; animation-duration: 10s; }
+    .circle:nth-child(4) { width: 60px; height: 60px; top: 50%; left: 50%; animation-duration: 8s; }
+
+    @keyframes float {
+      0% { transform: translateY(0px) translateX(0px); }
+      50% { transform: translateY(-30px) translateX(20px); }
+      100% { transform: translateY(0px) translateX(0px); }
+    }
+
+    /* Main content */
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 3em;
+      animation: warmGlow 2.5s ease-in-out infinite alternate;
+      text-shadow: 0 0 5px #ffd1a4, 0 0 10px #ffb374, 0 0 20px #ff8c42;
+    }
+
+    p {
+      font-size: 1.2em;
+      margin-top: 10px;
+      opacity: 0.85;
+    }
+
+    @keyframes warmGlow {
+      0% { text-shadow: 0 0 5px #ffd1a4, 0 0 10px #ffb374, 0 0 20px #ff8c42; }
+      50% { text-shadow: 0 0 10px #ffd1a4, 0 0 15px #ffb374, 0 0 25px #ff8c42; }
+      100% { text-shadow: 0 0 5px #ffd1a4, 0 0 10px #ffb374, 0 0 20px #ff8c42; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating circles -->
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+
+  <div class="content">
+    <h1>Hello!</h1>
+    <p>If you see this page, the web server is running.</p>
+  </div>
+</body>
+</html>

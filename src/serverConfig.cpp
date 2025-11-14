@@ -3,10 +3,9 @@
 #include <dirent.h>
 #include <algorithm>
 #include <unistd.h>
+#include "../includes/configUtils.hpp"
 
 const std::map<std::string, std::string> serverConfig::env = serverConfig::makeEnv();
-static const unsigned short initErrors[] = {400,401,402,403,404,500,501,502};
-const std::vector<unsigned short> serverConfig::errorCodes(initErrors,initErrors + sizeof(initErrors)/sizeof(initErrors[0]));
 
 std::map<std::string, std::string> serverConfig::makeEnv(void)
 {
@@ -22,7 +21,20 @@ std::map<std::string, std::string> serverConfig::makeEnv(void)
 	return m;
 }
 
-serverConfig::serverConfig(void) {}
+serverConfig::serverConfig(void) {
+	errorPages[400] = "etc/error/400.html";
+	errorPages[401] = "etc/error/401.html";
+	errorPages[402] = "etc/error/402.html";
+	errorPages[403] = "etc/error/403.html";
+	errorPages[404] = "etc/error/404.html";
+	errorPages[500] = "etc/error/500.html";
+	errorPages[501] = "etc/error/501.html";
+	errorPages[502] = "etc/error/501.html";
+	cgiConf.cgiAllowed = "on";
+	cgiConf.extensions.push_back("php");
+	cgiConf.extensions.push_back("py");
+	cgiConf.root = "etc/cgi_bin";
+}
 
 serverConfig::serverConfig(serverConfig const &copy) : locations(copy.getLocations()), routes(copy.getRoutes()), errorPages(copy.getErrorPages()), host(copy.getHost()), cgiConf(copy.getCgiConf()){}
 
@@ -44,16 +56,16 @@ serverConfig::~serverConfig(void) {}
 
 void serverConfig::addLocation(std::string key, t_location loc)
 {
-	DIR *dr;
-
-	if (key.empty())
-		throw errorHandler(INVALID_INSTRUCTION, "empty location");
-	dr = opendir(key.c_str());
-	if (dr)
-		closedir(dr);
-	else
-		throw errorHandler(INVALID_INSTRUCTION, key);
-	
+	try
+	{
+		if (key.empty())
+			throw errorHandler(INVALID_INSTRUCTION, "empty location");
+		configUtils::ifDir(key);
+	}
+	catch(const std::exception& e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
 	locations[key] = loc;
 }
 
@@ -72,18 +84,19 @@ void serverConfig::setHost(t_host newHost) {host = newHost;}
 void serverConfig::addErrorPages(unsigned short error, std::string page)
 {
 	std::stringstream ss;
-	std::string err;
-	if (std::find(errorCodes.begin(), errorCodes.end(), error) == errorCodes.end())
+	ss << error;
+	std::map<unsigned short, std::string>::iterator res;
+	res = errorPages.find(error);
+	if (res == errorPages.end())
+		throw errorHandler(WRONG_ERROR_CODE, ss.str());
+	try
 	{
-		err = "error code ";
-		ss << error;
-		err += ss.str();
-		throw errorHandler(INVALID_INSTRUCTION, err);
-	}	
-	
-	if (access(page.c_str(), R_OK) < 0)
+		configUtils::ifFile(page);
+	}
+	catch(const std::exception& e)
+	{
 		throw errorHandler(WRONG_FILE, page);
-
+	}
 	errorPages[error] = page;
 }
 

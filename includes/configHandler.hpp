@@ -15,7 +15,7 @@ private:
 	configHandler(configHandler const &copy);
 	configHandler &operator=(configHandler const &copy);
 	~configHandler(void);
-	static bool fillAddr(t_host &newHost, std::string const &line);
+	static void fillAddr(t_host &newHost, std::string const &line);
 	static void setMaxReqBody(t_host &newHost, std::string const &prop);
 	static void setTimeout(t_host &newHost, std::string const &prop); 
 public:

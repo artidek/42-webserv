@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:09 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/11 20:19:16 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/14 20:11:43 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,9 @@ enum {
 	WRONG_EXT,
 	CONFIG_EMPTY,
 	MISSING_PROPERTY,
-	WRONG_TOKEN
+	WRONG_TOKEN,
+	WRONG_ERROR_CODE,
+	INVALID_DIR
 };
 
 class errorHandler : public std::exception

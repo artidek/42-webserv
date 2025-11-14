@@ -133,7 +133,10 @@ void configParser::checkBlock(std::stack<std::string> &blockTokens)
 			else if (res == blockNames.end())
 				throw errorHandler(INVALID_INSTRUCTION, blockProp);
 			else
+			{
+				blockTokens.push(blockProp);
 				res->second(blockTokens);
+			}
 		}
 		else
 			res->second(blockTokens);

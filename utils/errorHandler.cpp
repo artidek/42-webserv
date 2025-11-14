@@ -6,13 +6,22 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:37 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/11 20:19:45 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/14 20:12:30 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/errorHandler.hpp"
 
-std::string errorHandler::errHead[] = {"Error: Missing token", "Error: Invalid instruction", "Error: Invalid file", "Error: No data available", "Error: Wrong extension", "Error: Empty config not allowed", "Error: Missing property in", "Error: Wrong token"};
+std::string errorHandler::errHead[] = {"Error in config file: Missing token", 
+	"Error in config file: Invalid instruction", 
+	"Error in config file:: Invalid file ", 
+	"Error in config file: No data available", 
+	"Error in config file: Wrong extension", 
+	"Error in config file: Empty config not allowed", 
+	"Error in config file: Missing property in ", 
+	"Error in config file: Wrong token",
+	"Error in config file: Invalid http error code",
+	" Error in config file: Invalid directory "};
 
 errorHandler::errorHandler(int errType, std::string err)
 {
