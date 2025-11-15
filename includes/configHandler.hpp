@@ -15,9 +15,9 @@ private:
 	configHandler(configHandler const &copy);
 	configHandler &operator=(configHandler const &copy);
 	~configHandler(void);
-	static void fillAddr(t_host &newHost, std::string const &line);
+	static void fillPorts(t_host &newHost, std::stack<std::string> &blockTokens);
 	static void setMaxReqBody(t_host &newHost, std::string const &prop);
-	static void setTimeout(t_host &newHost, std::string const &prop); 
+	static void setTimeout(t_host &newHost, std::string const &prop);
 public:
 	static void fillHostConf(std::stack<std::string> &blockTokens);
 	static void fillErrPg(std::stack<std::string> &blockTokens);

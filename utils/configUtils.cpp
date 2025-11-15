@@ -25,7 +25,7 @@ void configUtils::checkExt(std::string confFile)
 	throw errorHandler(WRONG_EXT, "");
 }
 
-bool configUtils::checkAddr(std::string addr)
+void configUtils::checkAddr(std::string addr)
 {
 	unsigned short	i;
 	unsigned int	addrPart;
@@ -36,29 +36,27 @@ bool configUtils::checkAddr(std::string addr)
 	while (std::getline(ss, buff, '.'))
 	{
 		if (buff.empty())
-			return (false);
+			throw errorHandler(INVALID_INSTRUCTION, addr);
 		std::stringstream toNum(buff);
 		toNum >> addrPart;
 		if (toNum.fail() || addrPart > 255)
-			return (false);
+			throw errorHandler(INVALID_INSTRUCTION, addr);
 		i++;
 	}
 	if (i != 4)
-		return (false);
-	return (true);
+		throw errorHandler(INVALID_INSTRUCTION, addr);
 }
 
-bool configUtils::checkPort(std::string port)
+void configUtils::checkPort(std::string port)
 {
 	unsigned int	p;
 
 	std::stringstream ss(port);
 	ss >> p;
 	if (ss.fail())
-		return (false);
+		throw errorHandler(INVALID_INSTRUCTION, port);
 	if (p > 65535)
-		return (false);
-	return (true);
+		throw errorHandler(INVALID_INSTRUCTION, port);
 }
 
 void configUtils::ifFile(std::string const &path)
@@ -162,4 +160,21 @@ void	configUtils::getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens)
 			cgi.extensions.push_back(setter);
 		blockTokens.pop();
 	}
+}
+
+void configUtils::ifPage(std::string const &path, std::string const &page)
+{
+	if (page == "none")
+		return;
+	std::string pagePath = path;
+	try
+	{
+		concatFilePath(pagePath, page);
+		ifFile(pagePath);
+	}
+	catch(const std::exception& e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
+	
 }

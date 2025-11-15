@@ -18,8 +18,8 @@ class configUtils
 	public:
 		static void	checkExt(std::string confFile);
 		static bool	isCurlBr(unsigned char c);
-		static bool checkAddr(std::string addr);
-		static bool checkPort(std::string port);
+		static void checkAddr(std::string addr);
+		static void checkPort(std::string port);
 		static void ifFile(std::string const &path);
 		static unsigned int toNum(std::string s);
 		static void ifDir(std::string const &path);
@@ -28,5 +28,6 @@ class configUtils
 		static void getFromList(t_location &loc, std::stack<std::string> &blockTokens);
 		static void getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens);
 		static bool onOff(std::string const &prop);
+		static void ifPage(std::string const &path, std::string const &page);
 };
 #endif

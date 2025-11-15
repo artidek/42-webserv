@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/14 11:58:29 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/15 23:22:57 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,10 +28,10 @@ typedef unsigned short timeout_t;
 
 typedef struct s_host
 {
-	std::string hostName;
 	std::string addr;
-	std::string port;
-	std::string defaulPage;
+	std::vector<std::string> ports;
+	std::string page;
+	std::string root;
 	int maxReqBody;
 	timeout_t hostTimeout;
 } t_host;

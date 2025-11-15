@@ -4,27 +4,30 @@
 
 serverConfig configHandler::host;
 
-void configHandler::fillAddr(t_host &newHost, std::string const &line)
+void configHandler::fillPorts(t_host &newHost, std::stack<std::string> &blockTokens)
 {
-	std::stringstream ss(line);
-	std::string addr;
-	std::string port;
-	if (std::getline(ss, addr, ':') && std::getline(ss, port))
+	std::string token = blockTokens.top();
+	blockTokens.pop();
+	try
 	{
-		if (!configUtils::checkAddr(addr))
-			throw errorHandler(INVALID_INSTRUCTION, addr);
-		if (!configUtils::checkPort(port))
-			throw errorHandler(INVALID_INSTRUCTION, port);
+		while (token != "]")
+		{
+			configUtils::checkPort(token);
+			newHost.ports.push_back(token);
+			blockTokens.pop();
+			token = blockTokens.top();
+		}
 	}
-	else
-		throw errorHandler(INVALID_INSTRUCTION, line);
-	newHost.addr = addr;
-	newHost.port = port;
+	catch (const std::exception &e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
+	blockTokens.pop();
 }
 
 void configHandler::setMaxReqBody(t_host &newHost, std::string const &prop)
 {
-	unsigned int maxBody;
+	unsigned int	maxBody;
 
 	try
 	{
@@ -32,7 +35,7 @@ void configHandler::setMaxReqBody(t_host &newHost, std::string const &prop)
 		if (maxBody > 1048576)
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
@@ -41,14 +44,15 @@ void configHandler::setMaxReqBody(t_host &newHost, std::string const &prop)
 
 void configHandler::setTimeout(t_host &newHost, std::string const &prop)
 {
-	unsigned int timeout;
+	unsigned int	timeout;
+
 	try
 	{
 		timeout = configUtils::toNum(prop);
 		if (timeout > 3600)
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
@@ -57,31 +61,32 @@ void configHandler::setTimeout(t_host &newHost, std::string const &prop)
 
 void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 {
-	t_host	newHost;
-	std::string prop;
-	std::string propName;
-	unsigned short count = 0;
-	
+	t_host			newHost;
+	unsigned short	count;
+
+	std::string propName, prop;
+	count = 0;
 	try
 	{
 		while (!blockTokens.empty())
 		{
-			if (!configUtils::getFromStack(propName, blockTokens) || !configUtils::getFromStack(prop, blockTokens))
-				throw errorHandler(MISSING_PROPERTY, "in route");
-			if (propName == "host_name")
+			if (!configUtils::getFromStack(propName, blockTokens)
+				|| !configUtils::getFromStack(prop, blockTokens))
+				throw errorHandler(MISSING_PROPERTY, "in host_config");
+			if (propName == "addr")
 			{
-				newHost.hostName = prop;
+				configUtils::checkAddr(prop);
+				newHost.addr = prop;
 				count++;
 			}
-			else if (propName == "listen")
+			else if (propName == "ports")
 			{
-				fillAddr(newHost, prop);
+				fillPorts(newHost, blockTokens);
 				count++;
 			}
 			else if (propName == "default_page")
 			{
-				configUtils::ifFile(prop);
-				newHost.defaulPage = prop;
+				newHost.page = prop;
 				count++;
 			}
 			else if (propName == "max_request_body")
@@ -94,35 +99,43 @@ void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 				setTimeout(newHost, prop);
 				count++;
 			}
+			else if (propName == "default_root")
+			{
+				configUtils::ifDir(prop);
+				newHost.root = prop;
+				count++;
+			}
 			else
 				throw errorHandler(INVALID_INSTRUCTION, propName);
 		}
+		if (count < 6)
+			throw errorHandler(MISSING_PROPERTY, " host config");
+		configUtils::ifPage(newHost.root, newHost.page);
 	}
 	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (count < 5)
-		throw errorHandler(MISSING_PROPERTY, " host config");
 	host.setHost(newHost);
 }
 
 void configHandler::fillErrPg(std::stack<std::string> &blockTokens)
 {
-	std::string propName;
-	std::string prop;
+	unsigned int	error;
 
+	std::string propName, prop;
 	try
 	{
 		while (!blockTokens.empty())
 		{
-			if (!configUtils::getFromStack(propName, blockTokens) || !configUtils::getFromStack(prop, blockTokens))
+			if (!configUtils::getFromStack(propName, blockTokens)
+				|| !configUtils::getFromStack(prop, blockTokens))
 				throw errorHandler(MISSING_PROPERTY, "in route");
-			unsigned int error = configUtils::toNum(propName);
+			error = configUtils::toNum(propName);
 			host.addErrorPages(error, prop);
 		}
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
@@ -130,12 +143,13 @@ void configHandler::fillErrPg(std::stack<std::string> &blockTokens)
 
 void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 {
-	std::string key = blockTokens.top();
-	t_route route;
-	std::string propName;
-	std::string prop;
-	unsigned short count = 0;
+	t_route			route;
+	unsigned short	count;
+	unsigned int	resp;
 
+	std::string key = blockTokens.top();
+	std::string propName, prop;
+	count = 0;
 	blockTokens.pop();
 	if (key.at(key.size() - 1) == ':')
 		host.addRoute("", route);
@@ -143,7 +157,8 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 	{
 		while (!blockTokens.empty())
 		{
-			if (!configUtils::getFromStack(propName, blockTokens) || !configUtils::getFromStack(prop, blockTokens))
+			if (!configUtils::getFromStack(propName, blockTokens)
+				|| !configUtils::getFromStack(prop, blockTokens))
 				throw errorHandler(MISSING_PROPERTY, "in route");
 			if (propName == "new_root")
 			{
@@ -153,44 +168,37 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 			}
 			else if (propName == "page")
 			{
-				if (prop == "none")
-					route.page = prop;
-				else
-				{
-					std::string filePath = route.newRoot;
-					configUtils::concatFilePath(filePath, prop);
-					configUtils::ifFile(filePath);
-					route.page = prop;
-				}
+				route.page = prop;
 				count++;
 			}
 			else if (propName == "success_response")
 			{
-				unsigned int resp = configUtils::toNum(prop);
+				resp = configUtils::toNum(prop);
 				if (resp < 100 || resp > 599)
 					throw errorHandler(INVALID_INSTRUCTION, prop);
 				route.response = resp;
 				count++;
 			}
 		}
+		if (count < 3)
+			throw errorHandler(MISSING_PROPERTY, " route");
+		configUtils::ifPage(route.newRoot, route.page);
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (count < 3)
-		throw errorHandler(MISSING_PROPERTY, " route");
 	host.addRoute(key, route);
 }
 
 void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 {
-	std::string key = blockTokens.top();
-	t_location loc;
-	std::string propName;
-	std::string prop;
-	unsigned short count = 0;
+	t_location		loc;
+	unsigned short	count;
 
+	std::string key = blockTokens.top();
+	std::string propName, prop;
+	count = 0;
 	blockTokens.pop();
 	if (key.at(key.size() - 1) == ':')
 		host.addLocation("", loc);
@@ -198,7 +206,8 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 	{
 		while (!blockTokens.empty())
 		{
-			if (!configUtils::getFromStack(propName, blockTokens) || !configUtils::getFromStack(prop, blockTokens))
+			if (!configUtils::getFromStack(propName, blockTokens)
+				|| !configUtils::getFromStack(prop, blockTokens))
 				throw errorHandler(MISSING_PROPERTY, "in route");
 			if (propName == "directory_listing")
 			{
@@ -217,7 +226,7 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 			}
 		}
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
@@ -228,15 +237,16 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 
 void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 {
-	t_cgi cgi;
-	std::string propName;
-	std::string prop;
-	unsigned short count = 0;
+	t_cgi			cgi;
+	unsigned short	count;
 
+	std::string propName, prop;
+	count = 0;
 	while (!blockTokens.empty())
 	{
-		if (!configUtils::getFromStack(propName, blockTokens) || !configUtils::getFromStack(prop, blockTokens))
-				throw errorHandler(MISSING_PROPERTY, "in route");
+		if (!configUtils::getFromStack(propName, blockTokens)
+			|| !configUtils::getFromStack(prop, blockTokens))
+			throw errorHandler(MISSING_PROPERTY, "in route");
 		if (propName == "cgi_allowed")
 		{
 			cgi.cgiAllowed = configUtils::onOff(prop);
@@ -260,4 +270,7 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 		throw errorHandler(MISSING_PROPERTY, " location");
 }
 
-serverConfig configHandler::getHost(void) {return host;}
+serverConfig configHandler::getHost(void)
+{
+	return (host);
+}

@@ -6,9 +6,8 @@
 #include "../includes/configHandler.hpp"
 
 std::stack<std::string> configParser::tokens;
-std::vector<serverConfig> configParser::hosts;
-std::map<std::string,
-	void (*)(std::stack<std::string> &)> configParser::blockNames;
+std::map<std::string,serverConfig> configParser::hosts;
+std::map<std::string, void (*)(std::stack<std::string> &)> configParser::blockNames;
 std::string configParser::flattened;
 std::string configParser::blockProp;
 bool configParser::blockEnd = false;
@@ -180,7 +179,6 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
  		while (!tokens.empty() && token != "host")
  		{
 			last = token[token.size() - 1];
-			//std::cout << "token " << token << "last " << last << "\n";
  			if (last == ':' || last == ';')
  			{
  				blockTokens.push(token);
@@ -206,8 +204,6 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
  				tokens.pop();
  				if (tokens.top() != "host")
 					checkBlock(blockTokens);
- 				else
- 					tokens.pop();
  				blockEnd = false;
  			}
 			else
@@ -215,11 +211,10 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
  			if (!tokens.empty())
 				token = tokens.top();
 		}
-		if (!tokens.empty())
-		{
-			std::cout << "token not empty " << tokens.top() << std::endl;
-			throw errorHandler(MISSING_TOKEN, "{");
-		}
+		if (tokens.empty() || tokens.top() != "host")
+			throw errorHandler(INVALID_INSTRUCTION, "one of the host missconfigured");
+		else
+			tokens.pop();
  	}
  	catch (const std::exception &e)
  	{
@@ -249,7 +244,8 @@ void configParser::parseConfig(std::string confFile)
 		while (!tokens.empty())
 		{
 			parseBlock();
-			hosts.push_back(configHandler::getHost());
+			serverConfig h = configHandler::getHost();
+			hosts[h.getHost().addr] = h;
 		}
 	}
 	catch (const std::exception &e)
