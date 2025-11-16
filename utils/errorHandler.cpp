@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:37 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/16 20:01:48 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/16 21:44:03 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,8 @@ std::string errorHandler::errHead[] = {"Error in config file: Missing token",
 	"Error setting server: failed to map addres ",
 	"Error setting server: failed to create socket ",
 	"Error setting server: failed to bind ",
-	"Error setting server: failed to mark port " };
+	"Error setting server: failed to mark port ",
+	"Error setting server: failed to create epoll " };
 
 errorHandler::errorHandler(int errType, std::string err)
 {

@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:09 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/16 20:01:01 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/16 21:43:25 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,8 @@ enum {
 	FAILED_MAP_ADDR,
 	SOCKET_FAILED,
 	BIND_FAILED,
-	PRT_MARK_FAILED
+	PRT_MARK_FAILED,
+	EPOLL_CREATE_FAIL
 };
 
 class errorHandler : public std::exception
