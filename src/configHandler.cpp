@@ -7,7 +7,6 @@ serverConfig configHandler::host;
 void configHandler::fillPorts(t_host &newHost, std::stack<std::string> &blockTokens)
 {
 	std::string token = blockTokens.top();
-	blockTokens.pop();
 	try
 	{
 		while (token != "]")
@@ -221,7 +220,10 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 			}
 			else if (propName == "methods")
 			{
-				configUtils::getFromList(loc, blockTokens);
+				if (prop == "none")
+					loc.methods.push_back(prop);
+				else
+					configUtils::getFromList(loc, blockTokens);
 				count++;
 			}
 		}

@@ -1,5 +1,6 @@
 #include <iostream>
 #include "includes/configParser.hpp"
+#include "includes/server.hpp"
 
 int main (int argc, char **argv)
 {
@@ -14,6 +15,8 @@ int main (int argc, char **argv)
 		try
 		{
 			configParser::parseConfig("default.conf");
+			server srv(configParser::getConfigs());
+			srv.set();
 		}
 		catch(const std::exception& e)
 		{

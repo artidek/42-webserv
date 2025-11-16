@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:09 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/14 20:11:43 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/16 20:01:01 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,11 @@ enum {
 	MISSING_PROPERTY,
 	WRONG_TOKEN,
 	WRONG_ERROR_CODE,
-	INVALID_DIR
+	INVALID_DIR,
+	FAILED_MAP_ADDR,
+	SOCKET_FAILED,
+	BIND_FAILED,
+	PRT_MARK_FAILED
 };
 
 class errorHandler : public std::exception

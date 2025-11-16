@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:37 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/14 20:12:30 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/16 20:01:48 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,11 @@ std::string errorHandler::errHead[] = {"Error in config file: Missing token",
 	"Error in config file: Missing property in ", 
 	"Error in config file: Wrong token",
 	"Error in config file: Invalid http error code",
-	" Error in config file: Invalid directory "};
+	"Error in config file: Invalid directory ",
+	"Error setting server: failed to map addres ",
+	"Error setting server: failed to create socket ",
+	"Error setting server: failed to bind ",
+	"Error setting server: failed to mark port " };
 
 errorHandler::errorHandler(int errType, std::string err)
 {

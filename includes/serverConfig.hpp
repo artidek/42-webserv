@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/15 23:22:57 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/16 13:54:03 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,7 @@ typedef struct s_host
 	std::string root;
 	int maxReqBody;
 	timeout_t hostTimeout;
+	bool empty();
 } t_host;
 
 typedef struct s_route
@@ -41,6 +42,7 @@ typedef struct s_route
 	std::string newRoot;
 	std::string page;
 	std::string response;
+	bool empty();
 } t_route;
 
 typedef struct s_cgi
@@ -55,6 +57,7 @@ typedef struct s_location
 	bool enableListing;
 	bool enableUpload;
 	std::vector<std::string> methods;
+	bool empty();
 }	t_location;
 
 class serverConfig
@@ -77,6 +80,7 @@ class serverConfig
 		void setHost(t_host newHost);
 		void addErrorPages(unsigned short error, std::string page);
 		void setCgi(t_cgi cgiConf);
+		void checkConfig();
 		t_route getRoute(std::string route) const;
 		t_location getLocation(std::string location) const;
 		std::map <std::string, std::string> getEnv(void) const;

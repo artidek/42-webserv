@@ -7,6 +7,28 @@
 
 const std::map<std::string, std::string> serverConfig::env = serverConfig::makeEnv();
 
+bool s_host::empty(void)
+{
+	if (addr.empty() && ports.empty() && page.empty() && root.empty() && maxReqBody == 0 && hostTimeout == 0)
+		return true;
+	return false;
+}
+
+
+bool s_route::empty(void)
+{
+	if (newRoot.empty() && page.empty() && response.empty())
+		return true;
+	return false;
+}
+
+bool s_location::empty(void)
+{
+	if (methods.empty())
+		return true;
+	return false;
+}
+
 std::map<std::string, std::string> serverConfig::makeEnv(void)
 {
 	std::map<std::string, std::string> m;
@@ -141,4 +163,23 @@ std::string serverConfig::getErrorPage(unsigned short error) const {
 	}
 
 	return res->second;
+}
+
+void serverConfig::checkConfig()
+{
+	std::map<std::string, t_location>::iterator lIt;
+	std::map<std::string, t_route>::iterator rIt;
+	
+	for (lIt = locations.begin(); lIt != locations.end(); ++lIt)
+	{
+		if (lIt->second.empty())
+		 throw errorHandler(MISSING_PROPERTY, " empty location");
+	}
+	for (rIt = routes.begin(); rIt != routes.end(); ++rIt)
+	{
+		if (rIt->second.empty())
+			throw errorHandler(MISSING_PROPERTY, " empty route");
+	}
+	if(host.empty())
+		throw errorHandler(MISSING_PROPERTY, " emty host config"); 
 }

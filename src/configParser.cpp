@@ -245,6 +245,7 @@ void configParser::parseConfig(std::string confFile)
 		{
 			parseBlock();
 			serverConfig h = configHandler::getHost();
+			h.checkConfig();
 			hosts[h.getHost().addr] = h;
 		}
 	}
@@ -253,3 +254,5 @@ void configParser::parseConfig(std::string confFile)
 		throw errorHandler(std::string(e.what()));
 	}
 }
+
+std::map<std::string, serverConfig> configParser::getConfigs(void) { return hosts; }
