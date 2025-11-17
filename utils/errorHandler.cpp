@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:37 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/16 21:44:03 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/17 14:16:55 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,8 @@ std::string errorHandler::errHead[] = {"Error in config file: Missing token",
 	"Error setting server: failed to create socket ",
 	"Error setting server: failed to bind ",
 	"Error setting server: failed to mark port ",
-	"Error setting server: failed to create epoll " };
+	"Error setting server: failed to create epoll ",
+	"Error epoll failed to read events: " };
 
 errorHandler::errorHandler(int errType, std::string err)
 {

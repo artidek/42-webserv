@@ -4,22 +4,19 @@
 #include <iostream>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <algorithm>
 
 bool server::stop = false;
+bool server::stopped = true;
+int server::epollFd = -1;
 
-server::server(std::map<std::string, serverConfig> const &conf) : configs(conf)
+server::server(std::vector<serverConfig> const &conf) : configs(conf)
 {
 }
 
 server::~server(void)
 {
-}
-
-void server::closeEpollFds(void)
-{
-	std::map<int, std::vector<struct epoll_event>>::iterator it;
-	for (it = epollEvents.begin(); it != epollEvents.end(); ++it)
-		close(it->first);
 }
 
 void server::closeSfds(void)
@@ -60,15 +57,13 @@ void server::setAddrInfo(std::vector<addrinfo *> &infos, t_host const &host)
 	}
 }
 
-void server::createSockets(std::string const &addr)
+void server::createSockets(serverConfig conf)
 {
 	int		sfd;
 	t_host	host;
 
-	std::map<std::string, serverConfig>::iterator find;
 	std::vector<addrinfo *> infos;
-	find = configs.find(addr);
-	host = find->second.getHost();
+	host = conf.getHost();
 	try
 	{
 		setAddrInfo(infos, host);
@@ -81,6 +76,7 @@ void server::createSockets(std::string const &addr)
 			if (bind(sfd, infos[i]->ai_addr, infos[i]->ai_addrlen) == -1)
 				throw errorHandler(BIND_FAILED, std::string(strerror(errno)));
 			socketFds.push_back(sfd);
+			listenToHost[sfd] = conf;
 		}
 	}
 	catch (const std::exception &e)
@@ -93,66 +89,127 @@ void server::createSockets(std::string const &addr)
 	freeInfos(infos);
 }
 
+void server::setNonBlocking(int &fd)
+{
+	int flags = fcntl(fd, F_GETFL, 0); //get all flags associated with file descriptor
+	if (flags == -1) flags = 0; //if no flags available set to 0
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK); //set nonblock flag
+}
+
 void server::set()
 {
-	int	epollFd;
-			struct epoll_event ev;
-
 	std::map<std::string, serverConfig>::iterator it;
+
 	try
 	{
-		for (it = configs.begin(); it != configs.end(); ++it)
-			createSockets(it->first);
+		for (size_t i = 0; i < configs.size(); i++)
+			createSockets(configs[i]);
+		epollFd = epoll_create1(0);
+		if (epollFd == -1)
+			throw errorHandler(EPOLL_CREATE_FAIL, std::string(strerror(errno)));
 		for (size_t i = 0; i < socketFds.size(); i++)
 		{
 			if (listen(socketFds[i], 4) == -1)
-				throw errorHandler(PRT_MARK_FAILED,
-					std::string(strerror(errno)));
-			epollFd = epoll_create1(0);
-			if (epollFd == -1)
-				throw errorHandler(EPOLL_CREATE_FAIL,
-					std::string(strerror(errno)));
+				throw errorHandler(PRT_MARK_FAILED, std::string(strerror(errno)));
+			struct epoll_event ev;
+			setNonBlocking(socketFds[i]);
 			ev.events = EPOLLIN;
 			ev.data.fd = socketFds[i];
 			if (epoll_ctl(epollFd, EPOLL_CTL_ADD, socketFds[i], &ev) == -1)
-				throw errorHandler(EPOLL_CREATE_FAIL,
-					std::string(strerror(errno)));
-			epollEvents[epollFd] = std::vector<struct epoll_event>(MAX_EVENTS);
+				throw errorHandler(EPOLL_CREATE_FAIL, std::string(strerror(errno)));
 		}
 	}
 	catch (const std::exception &e)
 	{
-		if (!epollEvents.empty())
-			closeEpollFds();
+		close(epollFd);
 		closeSfds();
 		throw errorHandler(std::string(e.what()));
 	}
 }
 
-void server::setWait(int &nfds, std::map<int, std::vector<struct epoll_event>>::iterator epoll)
+void server::readyEvents(int &nfds, struct epoll_event *events)
 {
-	nfds = epoll_wait(epoll->first, epoll->second.data(), MAX_EVENTS, 500);
-	if (nfds == -1)
-		throw errorHandler(std::string(strerror(errno)));
+	nfds = epoll_wait(epollFd, events, MAX_EVENTS, 500); //wait for events and put them to events buffer
+	if (nfds == - 1)
+		throw errorHandler(EVENTS_FAILED, std::string(strerror(errno)));
+}
+
+bool server::listenSocket(int const &fd, serverConfig &conf)
+{
+	std::vector<int>::iterator res = std::find(socketFds.begin(), socketFds.end(), fd);
+	if (res == socketFds.end())
+		return false;
+	std::map<int, serverConfig>::iterator resL = listenToHost.find(fd);
+	if (resL != listenToHost.end())
+		conf = resL->second;
+	return true;
+}
+
+void server::handleClientData(int const &fd)
+{
+	char buffer[BUFFER_SIZE + 1];
+	int readCount = recv(fd, buffer, BUFFER_SIZE, 0);
+	std::map<int, serverConfig>::iterator res;
+	res = fdToHost.find(fd);
+	if (res != fdToHost.end())
+		std::cout << "I foudn  ip " << res->second.getHost().addr << std::endl;
+	if (readCount > 0)
+		std::cout << buffer << std::endl;
+	close(fd);
+}
+
+
+
+void server::proceedEvents(int const &nfds, struct epoll_event *events)
+{
+	int conn_socket;
+
+	for (int n = 0; n < nfds; ++n)
+	{
+		int fd = events[n].data.fd;
+		serverConfig conf;
+		if (listenSocket(fd, conf))
+		{
+			while(true) //Accept all pending connections for the socket
+			{
+				struct sockaddr_in client_addr; 
+                socklen_t addrlen = sizeof(client_addr);
+                conn_socket = accept(fd, (struct sockaddr*)&client_addr, &addrlen); //If connection exist will create a connections socket and return it's fd else return -1 in most of the cases signaling there is no pending connection
+                if (conn_socket == -1) break; 
+				setNonBlocking(conn_socket); //sets connection socket nonblocking
+				struct epoll_event ev_client;
+            	ev_client.events = EPOLLIN | EPOLLET;  // edge-triggered read
+            	ev_client.data.fd = conn_socket;
+				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
+					close(conn_socket);
+				fdToHost[conn_socket] = conf;
+			}
+		}
+		else
+		{
+			handleClientData(fd);
+		}
+	}
 }
 
 void server::run()
 {
-	int nfds, conn_sock;
-	size_t i = 0;
+	int nfds;
+	struct epoll_event events[MAX_EVENTS];
 	while (!stop)
 	{
 		try
 		{
-			std::map<int, std::vector<struct epoll_event>>::iterator it;
-			for (it = epollEvents.begin(); it != epollEvents.end(); ++it)
-			{
-				setWait(nfds, it);
-			}
+			readyEvents(nfds, events);
+			proceedEvents(nfds, events);
 		}
 		catch (const std::exception &e)
 		{
-			std::cerr << e.what() << '\n';
+			std::string err = "Server fatal error causing server stop: ";
+			err += e.what();
+			closeSfds();
+			close(epollFd);
+			throw errorHandler(err);
 		}
 	}
 }

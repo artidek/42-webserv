@@ -17,6 +17,7 @@ int main (int argc, char **argv)
 			configParser::parseConfig("default.conf");
 			server srv(configParser::getConfigs());
 			srv.set();
+			srv.run();
 		}
 		catch(const std::exception& e)
 		{

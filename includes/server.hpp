@@ -10,25 +10,32 @@
 #include <sys/epoll.h>
 
 #define MAX_EVENTS 10
+#define BUFFER_SIZE 1024
 
 class server
 {
 	private:
 		static bool stop;
-		std::map<std::string, serverConfig> configs;
+		static bool stopped;
+		static int epollFd;
+		std::vector<serverConfig> configs;
+		std::map<int, serverConfig> fdToHost;
+		std::map<int, serverConfig> listenToHost;
 		std::vector<int> socketFds;
-		std::map<int, std::vector<struct epoll_event> > epollEvents;
 		server(void);
 		server(server const &copy);
 		server &operator=(server const &copy);
-		void createSockets(std::string const &addr);
+		void createSockets(serverConfig conf);
 		void setAddrInfo(std::vector<addrinfo*> &infos, t_host const &host);
 		void freeInfos(std::vector<addrinfo*> &infos);
 		void closeSfds(void);
-		void closeEpollFds(void);
-		void setWait(int &nfds, std::map<int, std::vector<struct epoll_event> >::iterator epoll);
+		void setNonBlocking(int &fd);
+		void readyEvents(int &nfds, struct epoll_event *events);
+		void proceedEvents(int const &nfds, struct epoll_event *events);
+		bool listenSocket(int const &fd, serverConfig &conf);
+		void handleClientData(int const &fd);
 	public:
-		server(std::map<std::string, serverConfig> const &conf);
+		server(std::vector<serverConfig> const &conf);
 		~server(void);
 		void set();
 		void run();

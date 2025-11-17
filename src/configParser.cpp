@@ -6,7 +6,7 @@
 #include "../includes/configHandler.hpp"
 
 std::stack<std::string> configParser::tokens;
-std::map<std::string,serverConfig> configParser::hosts;
+std::vector<serverConfig> configParser::hosts;
 std::map<std::string, void (*)(std::stack<std::string> &)> configParser::blockNames;
 std::string configParser::flattened;
 std::string configParser::blockProp;
@@ -246,7 +246,7 @@ void configParser::parseConfig(std::string confFile)
 			parseBlock();
 			serverConfig h = configHandler::getHost();
 			h.checkConfig();
-			hosts[h.getHost().addr] = h;
+			hosts.push_back(h);
 		}
 	}
 	catch (const std::exception &e)
@@ -255,4 +255,4 @@ void configParser::parseConfig(std::string confFile)
 	}
 }
 
-std::map<std::string, serverConfig> configParser::getConfigs(void) { return hosts; }
+std::vector<serverConfig> configParser::getConfigs(void) { return hosts; }

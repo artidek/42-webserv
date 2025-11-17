@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/16 12:12:05 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/17 21:00:18 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ class configParser
 		static std::string flattened;
 		static std::string blockProp;
 		static bool blockEnd;
-		static std::map<std::string,serverConfig> hosts;
+		static std::vector<serverConfig> hosts;
 		static std::map<std::string, void(*)(std::stack<std::string>&)>blockNames;
 		configParser(void);
 		configParser(configParser const &copy);
@@ -46,7 +46,7 @@ class configParser
 		static void initBlockNames(void);
 	public:
 		static void parseConfig(std::string confFile);
-		static std::map<std::string, serverConfig> getConfigs(void);
+		static std::vector<serverConfig> getConfigs(void);
 };
 
 #endif
