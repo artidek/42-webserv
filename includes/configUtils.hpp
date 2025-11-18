@@ -29,5 +29,6 @@ class configUtils
 		static void getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens);
 		static bool onOff(std::string const &prop);
 		static void ifPage(std::string const &path, std::string const &page);
+		static std::string trim (std::string const &src, std::string const & set);
 };
 #endif

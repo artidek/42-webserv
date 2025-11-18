@@ -147,18 +147,34 @@ bool server::listenSocket(int const &fd, serverConfig &conf)
 
 void server::handleClientData(int const &fd)
 {
-	char buffer[BUFFER_SIZE + 1];
-	int readCount = recv(fd, buffer, BUFFER_SIZE, 0);
 	std::map<int, serverConfig>::iterator res;
 	res = fdToHost.find(fd);
 	if (res != fdToHost.end())
-		std::cout << "I foudn  ip " << res->second.getHost().addr << std::endl;
-	if (readCount > 0)
-		std::cout << buffer << std::endl;
-	close(fd);
+	{
+		try
+		{
+			requestHandler rH(res->second);
+			rH.read(fd);
+			rH.parse();
+			std::string rD = rH.getRawData();
+			//std::cout << rD;
+			t_request reqData = rH.getReqData();
+			std::cout << reqData.method << std::endl;
+			std::cout << reqData.route << std::endl;
+			std::map<std::string, std::string>::iterator it;
+			for (it = reqData.headers.begin(); it != reqData.headers.end(); ++it)
+				std::cout << it->first << ": " << it->second << std::endl;
+			std::cout << "filename " << reqData.body.fileName << std::endl;
+			std::cout << "content " << reqData.body.content << std::endl;
+			close(fd);
+		}
+		catch(const std::exception& e)
+		{
+			close(fd);
+		}
+		
+	}
 }
-
-
 
 void server::proceedEvents(int const &nfds, struct epoll_event *events)
 {

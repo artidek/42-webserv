@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Upload & Delete File on Localhost</title>
+</head>
+<body>
+    <h2>Upload File</h2>
+
+    <!-- Upload Form -->
+    <form action="http://localhost/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="myfile" required>
+        <br><br>
+        <button type="submit">Upload</button>
+    </form>
+
+    <hr>
+
+    <h2>Delete File From Server</h2>
+
+    <label for="deleteFilename">Filename to delete:</label><br>
+    <input type="text" id="deleteFilename" placeholder="example.txt">
+    <br><br>
+    <button onclick="deleteFile()">Delete File</button>
+
+    <script>
+        function deleteFile() {
+            const filename = document.getElementById("deleteFilename").value.trim();
+
+            if (!filename) {
+                alert("Please enter a filename.");
+                return;
+            }
+
+            fetch("http://localhost/delete", {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ filename })
+            })
+            .then(res => res.text())
+            .then(msg => alert(msg))
+            .catch(err => alert("Error: " + err));
+        }
+    </script>
+
+</body>
+</html>

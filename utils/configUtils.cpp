@@ -178,3 +178,15 @@ void configUtils::ifPage(std::string const &path, std::string const &page)
 	}
 	
 }
+
+std::string configUtils::trim (std::string const &src, std::string const &set)
+{
+	std::string res = src;
+	for (int i = 0; set[i]; i++)
+	{
+		size_t first = res.find_first_not_of(set[i]);
+		size_t last = res.find_last_not_of(set[i]);
+		res = res.substr(first, last);
+	}
+	return res;
+}

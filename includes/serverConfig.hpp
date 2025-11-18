@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/16 13:54:03 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/18 19:55:56 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@
 #define HEAD "HEAD"
 #define POST "POST"
 #define DELETE "DELETE"
+#define OPTIONS "OPTIONS"
 
 typedef unsigned short timeout_t;
 

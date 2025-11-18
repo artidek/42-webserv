@@ -3,14 +3,14 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "../includes/serverConfig.hpp"
+#include "serverConfig.hpp"
+#include "requestHandler.hpp"
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
 
 #define MAX_EVENTS 10
-#define BUFFER_SIZE 1024
 
 class server
 {
