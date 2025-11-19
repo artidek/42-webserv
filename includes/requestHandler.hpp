@@ -44,6 +44,7 @@ class requestHandler
 		void fillMethodRoute(std::string headerProp);
 		void getFileName(t_reqBody &reqBody, std::string value);
 		void setBodyEnd(std::string token);
+		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
 	public:
 		requestHandler(serverConfig const &copy);
 		~requestHandler(void);

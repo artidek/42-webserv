@@ -87,10 +87,7 @@ void requestHandler::setBodyEnd(std::string token)
 				std::string find = "boundary=";
 				size_t found = tempVal.find(find);
 				if (found != std::string::npos)
-				{
 					_endBody = tempVal.substr(found + find.size(), tempVal.size() - 1);
-					_endBody = configUtils::trim(_endBody, "-");
-				}
 			}
 		}
 	}
@@ -139,11 +136,23 @@ void requestHandler::getFileName(t_reqBody &reqBody, std::string value)
 		size_t found = name.find(find);
 		if (found != std::string::npos)
 		{
-			name = name.substr(found + find.size() + 1, name.size() - 1);
+			name = name.substr(found + find.size(), name.size());
+			name = configUtils::trim(name, "\"");
 			reqBody.fileName = name;
 			break;
 		}
 	}
+}
+
+bool requestHandler::isBodyHeader(std::string &h, std::string &v, std::string const &token)
+{
+	std::stringstream ss(token);
+	if (std::getline(ss, h, ':') && std::getline(ss, v))
+	{
+		if (h == "Content-Disposition" || h == "Content-Type")
+			return true;
+	}
+	return false;
 }
 
 t_reqBody requestHandler::fillReqBody(void)
@@ -159,16 +168,15 @@ t_reqBody requestHandler::fillReqBody(void)
 			break;
 		else 
 		{
-			std::stringstream ss(token);
 			std::string h;
 			std::string v;
-			if (std::getline(ss, h, ':') && std::getline(ss, v))
+			if (isBodyHeader(h, v, token))
 			{
 				if (h == "Content-Disposition")
 					getFileName(res, v);
 			}
 			else
-				res.content += v;
+				res.content.insert(0, token);
 		}
 	}
 	return res;

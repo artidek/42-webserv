@@ -3,6 +3,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
+#include <ctime>
+
+const char * t_dayMonth::days[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+const char * t_dayMonth::months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 bool configUtils::isCurlBr(unsigned char c)
 {
@@ -189,4 +193,34 @@ std::string configUtils::trim (std::string const &src, std::string const &set)
 		res = res.substr(first, last);
 	}
 	return res;
+}
+
+std::string configUtils::formatTime(int const &tm)
+{
+	std::stringstream ss;
+	if (tm / 10 == 0)
+	{
+		ss << 0 << tm;
+		return ss.str();
+	}
+	ss << tm;
+	return ss.str();
+}
+
+std::string configUtils::getDateTime(void)
+{
+	std::time_t now = std::time(NULL);
+    std::tm *ptm = std::localtime(&now);
+	std::stringstream ss;
+	t_dayMonth dM;
+
+    int year   = ptm->tm_year + 1900;
+    int month  = ptm->tm_mon;
+    int day    = ptm->tm_mday;
+    int wday   = ptm->tm_wday;   // 0 = Sunday
+    int hour   = ptm->tm_hour;
+    int minute = ptm->tm_min;
+    int second = ptm->tm_sec;
+	ss << dM.days[wday] << ", " << day << " " << dM.months[month] << " " << year << " " << formatTime(hour) << ":" << formatTime(minute) << ":" << formatTime(second) << " CET";
+	return ss.str();
 }

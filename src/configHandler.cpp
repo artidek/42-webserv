@@ -187,6 +187,8 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
+	if (key[key.size() - 1] != '/')
+		key += "/";
 	host.addRoute(key, route);
 }
 
@@ -234,6 +236,8 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 	}
 	if (count < 3)
 		throw errorHandler(MISSING_PROPERTY, " location");
+	if (key[key.size() - 1] != '/')
+		key += "/";
 	host.addLocation(key, loc);
 }
 

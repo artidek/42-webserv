@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/18 19:55:56 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/19 11:43:02 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@
 #define POST "POST"
 #define DELETE "DELETE"
 #define OPTIONS "OPTIONS"
+#define SRV "webserv"
 
 typedef unsigned short timeout_t;
 

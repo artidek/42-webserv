@@ -5,7 +5,7 @@ SRCPATH = src/
 UTILSPATH = utils/
 
 SRC = $(SRCPATH)configParser.cpp $(SRCPATH)serverConfig.cpp $(SRCPATH)configHandler.cpp $(SRCPATH)server.cpp \
-	  $(SRCPATH)requestHandler.cpp
+	  $(SRCPATH)requestHandler.cpp $(SRCPATH)responseHandler.cpp
 UTILS = $(UTILSPATH)errorHandler.cpp $(UTILSPATH)configUtils.cpp
 
 SRCOBJS = $(patsubst %.cpp, ./objs/%.o, $(notdir $(SRC)))

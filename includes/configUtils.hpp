@@ -8,6 +8,12 @@
 #include <dirent.h>
 #include <stack>
 
+typedef struct s_dayMonth
+{
+	static const char  *days[7];
+	static const char  *months[12];
+} t_dayMonth;
+
 class configUtils
 {
 	private:
@@ -30,5 +36,7 @@ class configUtils
 		static bool onOff(std::string const &prop);
 		static void ifPage(std::string const &path, std::string const &page);
 		static std::string trim (std::string const &src, std::string const & set);
+		static std::string formatTime(int const &tm);
+		static std::string getDateTime(void);
 };
 #endif

@@ -1,5 +1,6 @@
 #include "../includes/errorHandler.hpp"
 #include "../includes/server.hpp"
+#include "../includes/responseHandler.hpp"
 #include <errno.h>
 #include <iostream>
 #include <string.h>
@@ -156,23 +157,13 @@ void server::handleClientData(int const &fd)
 			requestHandler rH(res->second);
 			rH.read(fd);
 			rH.parse();
-			std::string rD = rH.getRawData();
-			//std::cout << rD;
-			t_request reqData = rH.getReqData();
-			std::cout << reqData.method << std::endl;
-			std::cout << reqData.route << std::endl;
-			std::map<std::string, std::string>::iterator it;
-			for (it = reqData.headers.begin(); it != reqData.headers.end(); ++it)
-				std::cout << it->first << ": " << it->second << std::endl;
-			std::cout << "filename " << reqData.body.fileName << std::endl;
-			std::cout << "content " << reqData.body.content << std::endl;
+			responseHandler resp(res->second, rH.getReqData());
 			close(fd);
 		}
 		catch(const std::exception& e)
 		{
 			close(fd);
 		}
-		
 	}
 }
 
