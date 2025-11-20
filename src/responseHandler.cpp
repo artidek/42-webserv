@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 s_response::s_response(void)
 {
@@ -123,6 +124,7 @@ void responseHandler::fillResponseBody(std::string const & filePath)
 	if (file.fail())
 	{
 		resp.respCode = resp.respCodes["Internal Server Error"];
+		file.close();
 		throw errorHandler("Internal Server Error");
 	}
 	else
@@ -131,6 +133,7 @@ void responseHandler::fillResponseBody(std::string const & filePath)
 		ss << file.rdbuf();
 		resp.body = ss.str();
 	}
+	file.close();
 }
 
 void responseHandler::runGet(void)
@@ -224,4 +227,40 @@ void responseHandler::createResponce(void)
 		throw errorHandler(std::string(e.what()));
 	}
 
+}
+
+void responseHandler::fillSendBuffer(std::string &buffer)
+{
+	std::stringstream ss;
+	ss << "HTTP/1.1 " << resp.respCode << " OK" << "\r\n";
+	std::map<std::string, std::string>::iterator it = resp.headers.begin();
+	for (; it != resp.headers.end(); ++it)
+		ss << it->first << " " << it->second << "\r\n";
+	ss << "\r\n";
+	ss << resp.body;
+	buffer = ss.str();
+}
+
+void responseHandler::sendResponse(int const &fd)
+{
+	std::string buffer;
+	fillSendBuffer(buffer);
+	size_t len = buffer.size();
+	size_t total = 0;
+	const char *buffP = buffer.c_str();
+	while (total < len)
+	{
+		int writeBytes = send(fd, buffP + total, len - total, 0);
+		if (writeBytes < 0)
+		{
+			if (errno == EINTR) continue;
+			else if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
+			else 
+				throw errorHandler("send failed");
+		}
+		if (writeBytes == 0)
+			throw errorHandler("peer closed");
+		total += writeBytes;
+	}
 }

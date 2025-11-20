@@ -50,7 +50,7 @@ void requestHandler::read(int const &fd)
 	while(true)
 	{
 		char buffer[BUFFER_SIZE + 1];
-		readBytes = recv(fd, buffer, BUFFER_SIZE, 0);
+		readBytes = recv(fd, buffer, sizeof(buffer), 0);
 		if (readBytes > 0 && totalRead <= readSize)
 		{
 			_rawData += buffer;

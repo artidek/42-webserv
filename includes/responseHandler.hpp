@@ -45,11 +45,13 @@ class responseHandler
 		static void allowedMethod(std::string const &root);
 		static void ifGetFile(std::string const &rt, std::string &route);
 		static void fillResponseBody(std::string const &filePath);
-		static std::string eTag(std::string const &file); //waiting for implementation
+		static std::string eTag(std::string const &file);
+		static void fillSendBuffer(std::string &buffer);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);
 		void createResponce(void);
+		void sendResponse(int const &fd);
 		t_response const getResponceData(void) const;
 };
 

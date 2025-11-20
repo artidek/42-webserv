@@ -130,7 +130,7 @@ void server::set()
 
 void server::readyEvents(int &nfds, struct epoll_event *events)
 {
-	nfds = epoll_wait(epollFd, events, MAX_EVENTS, 500); //wait for events and put them to events buffer
+	nfds = epoll_wait(epollFd, events, MAX_EVENTS, 100); //wait for events and put them to events buffer
 	if (nfds == - 1)
 		throw errorHandler(EVENTS_FAILED, std::string(strerror(errno)));
 }
@@ -160,6 +160,7 @@ void server::handleClientData(int const &fd)
 			rH.parse();
 			responseHandler resp(res->second, rH.getReqData());
 			resp.createResponce();
+			resp.sendResponse(fd);
 			// t_response response = resp.getResponceData();
 			// std::cout << "respnose code " << response.respCode << std::endl;
 			// std::map<std::string, std::string>::iterator it = response.headers.begin();
@@ -167,10 +168,13 @@ void server::handleClientData(int const &fd)
 			// 	std::cout << it->first << " " << it->second << std::endl;
 			// std::cout << "body: " << response.body;
 			close(fd);
+			fdToHost.erase(fd);
 		}
 		catch(const std::exception& e)
 		{
+			std::cout << e.what();
 			close(fd);
+			fdToHost.erase(fd);
 		}
 	}
 }
