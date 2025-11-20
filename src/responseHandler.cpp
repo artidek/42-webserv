@@ -120,20 +120,18 @@ void responseHandler::isRoute(std::string const &rt, t_route &route)
 
 void responseHandler::fillResponseBody(std::string const & filePath)
 {
-	std::fstream file(filePath.c_str());
-	if (file.fail())
-	{
-		resp.respCode = resp.respCodes["Internal Server Error"];
-		file.close();
-		throw errorHandler("Internal Server Error");
+	std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary);
+	std::cout << "it is fucking path to the file " << filePath << std::endl;
+	std::cout << "fucking getFile is " << isGetFile << std::endl;
+	if (!file.is_open()) {
+    	resp.respCode = resp.respCodes["Internal Server Error"];
+    	throw errorHandler("Internal Server Error");
 	}
-	else
-	{
-		std::stringstream ss;
-		ss << file.rdbuf();
-		resp.body = ss.str();
-	}
-	file.close();
+	std::stringstream ss;
+	file.seekg(0);
+	ss << file.rdbuf();
+	std::cout << ss.str().size() << " it is the size of buffer \n";
+	resp.body = ss.str();
 }
 
 void responseHandler::runGet(void)
