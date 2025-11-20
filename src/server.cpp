@@ -156,8 +156,16 @@ void server::handleClientData(int const &fd)
 		{
 			requestHandler rH(res->second);
 			rH.read(fd);
+			//std::cout << rH.getRawData();
 			rH.parse();
 			responseHandler resp(res->second, rH.getReqData());
+			resp.createResponce();
+			// t_response response = resp.getResponceData();
+			// std::cout << "respnose code " << response.respCode << std::endl;
+			// std::map<std::string, std::string>::iterator it = response.headers.begin();
+			// for(; it != response.headers.end(); ++it)
+			// 	std::cout << it->first << " " << it->second << std::endl;
+			// std::cout << "body: " << response.body;
 			close(fd);
 		}
 		catch(const std::exception& e)
@@ -179,10 +187,10 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
 		{
 			while(true) //Accept all pending connections for the socket
 			{
-				struct sockaddr_in client_addr; 
+				struct sockaddr_in client_addr;
                 socklen_t addrlen = sizeof(client_addr);
                 conn_socket = accept(fd, (struct sockaddr*)&client_addr, &addrlen); //If connection exist will create a connections socket and return it's fd else return -1 in most of the cases signaling there is no pending connection
-                if (conn_socket == -1) break; 
+                if (conn_socket == -1) break;
 				setNonBlocking(conn_socket); //sets connection socket nonblocking
 				struct epoll_event ev_client;
             	ev_client.events = EPOLLIN | EPOLLET;  // edge-triggered read

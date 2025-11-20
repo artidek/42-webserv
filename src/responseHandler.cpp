@@ -2,6 +2,8 @@
 #include "../includes/configUtils.hpp"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
+#include <sys/stat.h>
 
 s_response::s_response(void)
 {
@@ -29,6 +31,12 @@ s_response::s_response(void)
 	respCodes["Service Unavailable"] = 503;
 }
 
+bool responseHandler::isGetFile = false;
+std::string responseHandler::file;
+t_request responseHandler::request;
+t_response responseHandler::resp;
+serverConfig responseHandler::conf;
+
 responseHandler::responseHandler(serverConfig const &config, t_request const &req) {
 
 	runMethod[GET] = responseHandler::runGet;
@@ -41,6 +49,28 @@ responseHandler::responseHandler(serverConfig const &config, t_request const &re
 
 responseHandler::~responseHandler(void) {}
 
+std::string responseHandler::eTag(std::string const &file)
+{
+	struct stat st;
+    if (stat(file.c_str(), &st) != 0) {
+        return "";  // file not found
+    }
+
+    std::stringstream ss;
+    ss << "\""
+       << std::hex << st.st_ino        // inode
+       << "-" << st.st_size            // file size
+       << "-" << st.st_mtime           // last modified timestamp
+       << "\"";
+
+    return ss.str();
+}
+
+t_response const responseHandler::getResponceData(void) const
+{
+	return resp;
+}
+
 void responseHandler::allowedMethod(std::string const &root)
 {
 	t_location loc = conf.getLocations()[root];
@@ -52,18 +82,55 @@ void responseHandler::allowedMethod(std::string const &root)
 	}
 }
 
+void responseHandler::ifGetFile(std::string const &rt, std::string &route)
+{
+	size_t split = rt.find_last_of("/");
+	file = rt.substr(split + 1);
+	if (file.find(".") != std::string::npos)
+	{
+		isGetFile = true;
+		route = rt.substr(0, split);
+		return;
+	}
+	route = rt;
+}
+
 void responseHandler::isRoute(std::string const &rt, t_route &route)
 {
+	std::string cleanedRoute;
+	ifGetFile(rt, cleanedRoute);
 	try
 	{
-		route = conf.getRoute(rt);
+
+		route = conf.getRoute(cleanedRoute);
+		if (isGetFile)
+		{
+			std::string filePath = route.newRoot + file;
+			configUtils::ifFile(filePath);
+		}
 	}
 	catch(const std::exception& e)
 	{
 		resp.respCode = resp.respCodes["Not Found"];
 		throw errorHandler("Not Found");
 	}
-	
+
+}
+
+void responseHandler::fillResponseBody(std::string const & filePath)
+{
+	std::fstream file(filePath.c_str());
+	if (file.fail())
+	{
+		resp.respCode = resp.respCodes["Internal Server Error"];
+		throw errorHandler("Internal Server Error");
+	}
+	else
+	{
+		std::stringstream ss;
+		ss << file.rdbuf();
+		resp.body = ss.str();
+	}
 }
 
 void responseHandler::runGet(void)
@@ -73,12 +140,36 @@ void responseHandler::runGet(void)
 	{
 		isRoute(request.route, route);
 		allowedMethod(route.newRoot);
+		std::stringstream ss(route.response);
+		ss >> resp.respCode;
+		if (isGetFile)
+			fillResponseBody(route.newRoot + file);
+		else
+		{
+			if (route.page == "none")
+			{
+				resp.respCode = resp.respCodes["Forbidden"];
+				throw errorHandler("Forbiddden");
+			}
+			else
+				fillResponseBody(route.newRoot + route.page);
+		}
+		resp.headers["Server:"] = SRV;
+		resp.headers["Date:"] = configUtils::getDateTime();
+		resp.headers["Content-Type:"] = request.headers["Content-Type:"];
+		ss.clear();
+		ss << resp.body.size();
+		resp.headers["Content-Length:"] = ss.str();
+		resp.headers["Connection:"] = "keep-alive";
+		resp.headers["ETag:"] = eTag(route.newRoot + route.page);
+		resp.headers["Accept-Ranges:"] = "bytes";
+
 	}
 	catch(const std::exception& e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	
+
 }
 
 void responseHandler::runPost(void)
@@ -132,5 +223,5 @@ void responseHandler::createResponce(void)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	
+
 }

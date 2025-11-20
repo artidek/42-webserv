@@ -162,6 +162,8 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 			if (propName == "new_root")
 			{
 				configUtils::ifDir(prop);
+				if (prop[prop.size() - 1] != '/')
+					prop += "/";
 				route.newRoot = prop;
 				count++;
 			}
@@ -175,7 +177,7 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 				resp = configUtils::toNum(prop);
 				if (resp < 100 || resp > 599)
 					throw errorHandler(INVALID_INSTRUCTION, prop);
-				route.response = resp;
+				route.response = prop;
 				count++;
 			}
 		}
@@ -187,8 +189,6 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (key[key.size() - 1] != '/')
-		key += "/";
 	host.addRoute(key, route);
 }
 

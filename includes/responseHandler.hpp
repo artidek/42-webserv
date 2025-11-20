@@ -28,6 +28,8 @@ typedef struct s_response
 class responseHandler
 {
 	private:
+		static bool isGetFile;
+		static std::string file;
 		std::map<std::string, void(*)(void)>runMethod;
 		static serverConfig conf;
 		static t_request request;
@@ -41,10 +43,14 @@ class responseHandler
 		void isMethod(std::string &mtd);
 		static void isRoute(std::string const &rt, t_route &route);
 		static void allowedMethod(std::string const &root);
+		static void ifGetFile(std::string const &rt, std::string &route);
+		static void fillResponseBody(std::string const &filePath);
+		static std::string eTag(std::string const &file); //waiting for implementation
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);
 		void createResponce(void);
+		t_response const getResponceData(void) const;
 };
 
 #endif
