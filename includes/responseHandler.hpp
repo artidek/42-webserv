@@ -19,7 +19,7 @@
 typedef struct s_response
 {
 	int respCode;
-	std::map<std::string, int> respCodes;
+	std::map<int, std::string> respCodes;
 	std::map<std::string, std::string> headers;
 	std::string body;
 	s_response(void);
@@ -29,6 +29,7 @@ class responseHandler
 {
 	private:
 		static bool isGetFile;
+		static bool emptyBody;
 		static std::string file;
 		std::map<std::string, void(*)(void)>runMethod;
 		static serverConfig conf;
@@ -47,6 +48,7 @@ class responseHandler
 		static void fillResponseBody(std::string const &filePath);
 		static std::string eTag(std::string const &file);
 		static void fillSendBuffer(std::string &buffer);
+		static void sendToClient(size_t const &size, const char *buff, int const &fd); 
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

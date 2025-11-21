@@ -1,6 +1,5 @@
 #include "../includes/errorHandler.hpp"
 #include "../includes/server.hpp"
-#include "../includes/responseHandler.hpp"
 #include <errno.h>
 #include <iostream>
 #include <string.h>
@@ -146,29 +145,46 @@ bool server::listenSocket(int const &fd, serverConfig &conf)
 	return true;
 }
 
+bool server::isPendingReq(int const &fd, requestHandler &req)
+{
+	std::map<int, requestHandler>::iterator res = pendingRequests.find(fd);
+	if (res == pendingRequests.end())
+		return false;
+	req = res->second;
+	return true;
+}
+
 void server::handleClientData(int const &fd)
 {
 	std::map<int, serverConfig>::iterator res;
 	res = fdToHost.find(fd);
+	requestHandler rH;
 	if (res != fdToHost.end())
 	{
 		try
 		{
-			requestHandler rH(res->second);
+			if (!isPendingReq(fd, rH))
+				rH = requestHandler(res->second);
 			rH.read(fd);
-			std::cout << rH.getRawData();
-			rH.parse();
-			responseHandler resp(res->second, rH.getReqData());
-			resp.createResponce();
+			if (rH.requestComplete())
+			{
+				std::cout << rH.getRawData();
+				rH.parse();
+				responseHandler resp(res->second, rH.getReqData());
+				resp.createResponce();
+				resp.sendResponse(fd);
+				close(fd);
+				fdToHost.erase(fd);
+			}
+			else
+				pendingRequests[fd] = rH;
 			// t_response response = resp.getResponceData();
 			// std::cout << "respnose code " << response.respCode << std::endl;
 			// std::map<std::string, std::string>::iterator it = response.headers.begin();
 			// for(; it != response.headers.end(); ++it)
 			// 	std::cout << it->first << " " << it->second << std::endl;
 			// std::cout << "body: " << response.body;
-			resp.sendResponse(fd);
-			close(fd);
-			fdToHost.erase(fd);
+			
 		}
 		catch(const std::exception& e)
 		{

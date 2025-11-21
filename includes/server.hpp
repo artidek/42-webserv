@@ -5,6 +5,7 @@
 
 #include "serverConfig.hpp"
 #include "requestHandler.hpp"
+#include "responseHandler.hpp"
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -18,6 +19,7 @@ class server
 		static bool stop;
 		static bool stopped;
 		static int epollFd;
+		std::map<int, requestHandler> pendingRequests;
 		std::vector<serverConfig> configs;
 		std::map<int, serverConfig> fdToHost;
 		std::map<int, serverConfig> listenToHost;
@@ -34,6 +36,7 @@ class server
 		void proceedEvents(int const &nfds, struct epoll_event *events);
 		bool listenSocket(int const &fd, serverConfig &conf);
 		void handleClientData(int const &fd);
+		bool isPendingReq(int const &fd, requestHandler &req);
 	public:
 		server(std::vector<serverConfig> const &conf);
 		~server(void);

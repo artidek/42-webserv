@@ -5,6 +5,7 @@
 
 #include "serverConfig.hpp"
 #include <stack>
+#include <ctime>
 
 
 #define BUFFER_SIZE 8192
@@ -22,7 +23,6 @@ typedef struct s_request
 	std::string route;
 	t_reqBody body;
 	std::map<std::string, std::string> headers;
-	bool empty(void);
 } t_request;
 
 class requestHandler
@@ -31,12 +31,10 @@ class requestHandler
 		serverConfig _host;
 		std::string _rawData;
 		std::string _endBody;
+		static std::map<int, double>timeLog;
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
-		requestHandler(void);
-		requestHandler(requestHandler const &copy);
-		requestHandler &operator=(requestHandler const &copy);
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
@@ -45,13 +43,22 @@ class requestHandler
 		void getFileName(t_reqBody &reqBody, std::string value);
 		void setBodyEnd(std::string token);
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
+		void addToTimeLog(int fd, double sec);
+		void checkTimeout(int fd, double sec);
 	public:
+		requestHandler(void);
 		requestHandler(serverConfig const &copy);
+		requestHandler(requestHandler const &copy);
+		requestHandler &operator=(requestHandler const &copy);
 		~requestHandler(void);
 		void read(int const &fd);
 		void parse(void);
 		std::string const &getRawData(void) const;
-		t_request getReqData(void) const;
+		t_request const getReqData(void) const;
+		bool requestComplete(void);
+		serverConfig const getConfig(void) const;
+		std::string const getEndBody(void) const;
+		std::stack<std::string> const getTokens(void) const;
 };
 
 #endif

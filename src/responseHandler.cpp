@@ -8,31 +8,30 @@
 
 s_response::s_response(void)
 {
-	respCodes["Continue"] = 100;
-	respCodes["OK"] = 200;
-	respCodes["Created"] = 201;
-	respCodes["Accepted"] = 202;
-	respCodes["No Content"] = 204;
-	respCodes["Multiple Choices"] = 300;
-	respCodes["Moved Permanently"] = 301;
-	respCodes["Found"] = 302;
-	respCodes["Not Modified"] = 304;
-	respCodes["Bad Request"] = 400;
-	respCodes["Unauthorized"] = 401;
-	respCodes["Forbidden"] = 403;
-	respCodes["Not Found"] = 404;
-	respCodes["Method Not Allowed"] = 405;
-	respCodes["Not Acceptable"] = 406;
-	respCodes["Request Timeout"] = 408;
-	respCodes["Request To Large"] = 413;
-	respCodes["Unsupported Media Type"] = 415;
-	respCodes["Internal Server Error"] = 500;
-	respCodes["Not Implemented"] = 501;
-	respCodes["Bad Gateway"] = 502;
-	respCodes["Service Unavailable"] = 503;
+	respCodes[100] = "Continue";
+	respCodes[200] = "OK";
+	respCodes[201] = "Created";
+	respCodes[202] = "Accepted";
+	respCodes[204] = "No Content";
+	respCodes[300] = "Multiple Choices";
+	respCodes[301] = "Moved Permanently";
+	respCodes[302] = "Found";
+	respCodes[304] = "Not Modified";
+	respCodes[400] = "Bad Request";
+	respCodes[401] = "Unauthorized";
+	respCodes[403] = "Forbidden";
+	respCodes[404] = "Not Found";
+	respCodes[405] = "Method Not Allowed";
+	respCodes[408] = "Request Timeout";
+	respCodes[413] = "Request To Large";
+	respCodes[500] = "Internal Server Error";
+	respCodes[501] = "Not Implemented";
+	respCodes[502] = "Bad Gateway";
+	respCodes[503] = "Service Unavailable";
 }
 
 bool responseHandler::isGetFile = false;
+bool responseHandler::emptyBody = false;
 std::string responseHandler::file;
 t_request responseHandler::request;
 t_response responseHandler::resp;
@@ -78,7 +77,7 @@ void responseHandler::allowedMethod(std::string const &root)
 	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), "GET");
 	if (res == loc.methods.end())
 	{
-		resp.respCode = resp.respCodes["Method Not Allowed"];
+		resp.respCode = 405;
 		throw errorHandler("Method Not Allowed");
 	}
 }
@@ -93,6 +92,7 @@ void responseHandler::ifGetFile(std::string const &rt, std::string &route)
 		route = rt.substr(0, split);
 		return;
 	}
+	isGetFile = false;
 	route = rt;
 }
 
@@ -112,7 +112,7 @@ void responseHandler::isRoute(std::string const &rt, t_route &route)
 	}
 	catch(const std::exception& e)
 	{
-		resp.respCode = resp.respCodes["Not Found"];
+		resp.respCode = 404;
 		throw errorHandler("Not Found");
 	}
 
@@ -120,18 +120,20 @@ void responseHandler::isRoute(std::string const &rt, t_route &route)
 
 void responseHandler::fillResponseBody(std::string const & filePath)
 {
-	std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary);
-	std::cout << "it is fucking path to the file " << filePath << std::endl;
-	std::cout << "fucking getFile is " << isGetFile << std::endl;
-	if (!file.is_open()) {
-    	resp.respCode = resp.respCodes["Internal Server Error"];
+	std::fstream file(filePath.c_str());
+	if (file.fail()) {
+    	resp.respCode = 500;
     	throw errorHandler("Internal Server Error");
 	}
 	std::stringstream ss;
-	file.seekg(0);
-	ss << file.rdbuf();
-	std::cout << ss.str().size() << " it is the size of buffer \n";
-	resp.body = ss.str();
+	if (resp.respCode != 204)
+	{
+		ss << file.rdbuf();
+		resp.body = ss.str();
+		emptyBody = false;
+		return;
+	}
+	emptyBody = true;
 }
 
 void responseHandler::runGet(void)
@@ -149,7 +151,7 @@ void responseHandler::runGet(void)
 		{
 			if (route.page == "none")
 			{
-				resp.respCode = resp.respCodes["Forbidden"];
+				resp.respCode = 403;
 				throw errorHandler("Forbiddden");
 			}
 			else
@@ -157,7 +159,6 @@ void responseHandler::runGet(void)
 		}
 		resp.headers["Server:"] = SRV;
 		resp.headers["Date:"] = configUtils::getDateTime();
-		resp.headers["Content-Type:"] = request.headers["Content-Type:"];
 		ss.clear();
 		ss << resp.body.size();
 		resp.headers["Content-Length:"] = ss.str();
@@ -196,7 +197,7 @@ void responseHandler::isMethod(std::string &mtd)
 		m = request.headers["Access-Control-Request-Method"];
 		if (m != GET && m != POST && m != DELETE && m != HEAD)
 		{
-			resp.respCode = resp.respCodes["Bad Request"];
+			resp.respCode = 400;
 			throw errorHandler("Bad request");
 		}
 		else
@@ -206,7 +207,7 @@ void responseHandler::isMethod(std::string &mtd)
 		mtd = m;
 	else
 	{
-		resp.respCode = resp.respCodes["Bad Request"];
+		resp.respCode = 400;
 		throw errorHandler("Bad request");
 	}
 }
@@ -230,25 +231,23 @@ void responseHandler::createResponce(void)
 void responseHandler::fillSendBuffer(std::string &buffer)
 {
 	std::stringstream ss;
-	ss << "HTTP/1.1 " << resp.respCode << " OK" << "\r\n";
+	std::map<int , std::string>::iterator res = resp.respCodes.find(resp.respCode);
+	ss << "HTTP/1.1 " << resp.respCode << " " << res->second << "\r\n";
 	std::map<std::string, std::string>::iterator it = resp.headers.begin();
 	for (; it != resp.headers.end(); ++it)
 		ss << it->first << " " << it->second << "\r\n";
 	ss << "\r\n";
-	ss << resp.body;
+	if (!emptyBody)
+		ss << resp.body;
 	buffer = ss.str();
 }
 
-void responseHandler::sendResponse(int const &fd)
+void responseHandler::sendToClient(size_t const &size, const char *buff, int const &fd)
 {
-	std::string buffer;
-	fillSendBuffer(buffer);
-	size_t len = buffer.size();
 	size_t total = 0;
-	const char *buffP = buffer.c_str();
-	while (total < len)
+	while (total < size)
 	{
-		int writeBytes = send(fd, buffP + total, len - total, 0);
+		int writeBytes = send(fd, buff + total, size - total, 0);
 		if (writeBytes < 0)
 		{
 			if (errno == EINTR) continue;
@@ -262,3 +261,18 @@ void responseHandler::sendResponse(int const &fd)
 		total += writeBytes;
 	}
 }
+
+void responseHandler::sendResponse(int const &fd)
+{
+	std::string buffer;
+	fillSendBuffer(buffer);
+	try
+	{
+		sendToClient(buffer.size(), buffer.c_str(), fd);
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+}
+

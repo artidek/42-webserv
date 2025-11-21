@@ -1,9 +1,10 @@
+#include "../includes/configUtils.hpp"
 #include "../includes/requestHandler.hpp"
 #include <sys/socket.h>
 #include <errno.h>
 #include <iostream>
-#include "../includes/configUtils.hpp"
 
+std::map<int, double>requestHandler::timeLog;
 std::map<std::string, std::string> requestHandler::_headers = initHeaders();
 
 std::map<std::string, std::string> requestHandler::initHeaders(void)
@@ -28,16 +29,30 @@ bool t_reqBody::empty(void)
 	return true;
 }
 
-bool t_request::empty(void)
-{
-	if (body.empty() && method.empty() && route.empty() && headers.empty())
-		return false;
-	return true;
-}
+requestHandler::requestHandler(serverConfig const &conf) : _host(conf) {}
 
-requestHandler::requestHandler(serverConfig const &copy) : _host(copy) {}
+requestHandler::requestHandler(void) {}
 
 requestHandler::~requestHandler(void) {}
+
+requestHandler::requestHandler(requestHandler const &copy)
+{
+	_host = copy.getConfig();
+	_rawData = copy.getRawData();
+	_endBody = copy.getEndBody();
+	_tokens = copy.getTokens();
+	_request = copy.getReqData();
+}
+
+requestHandler &requestHandler::operator=(requestHandler const &copy)
+{
+	_host = copy.getConfig();
+	_rawData = copy.getRawData();
+	_endBody = copy.getEndBody();
+	_tokens = copy.getTokens();
+	_request = copy.getReqData();
+	return *this;
+}
 
 std::string const &requestHandler::getRawData(void) const { return _rawData; }
 
@@ -46,7 +61,8 @@ void requestHandler::read(int const &fd)
 	int readSize = _host.getHost().maxReqBody + BUFFER_SIZE;
 	int readBytes = 0;
 	int totalRead = 0;
-	
+
+	addToTimeLog(fd, configUtils::getTime());
 	while(true)
 	{
 		char buffer[BUFFER_SIZE + 1];
@@ -67,8 +83,17 @@ void requestHandler::read(int const &fd)
 			else
 				throw errorHandler("Reading error");
 		}
-
 	}
+	try
+	{
+		checkTimeout(fd, configUtils::getTime());
+	}
+	catch(const std::exception& e)
+	{
+		//need to implement bad response here
+		throw errorHandler(std::string(e.what()));
+	}
+	
 }
 
 void requestHandler::setBodyEnd(std::string token)
@@ -207,4 +232,65 @@ void requestHandler::parse(void)
 	}
 }
 
-t_request requestHandler::getReqData(void) const { return _request; }
+t_request const requestHandler::getReqData(void) const { return _request; }
+
+void requestHandler::addToTimeLog(int fd, double sec)
+{
+	std::map<int, double>::iterator res = timeLog.find(fd);
+	if (res == timeLog.end())
+		timeLog[fd] = sec;
+}
+
+void requestHandler::checkTimeout(int fd, double sec)
+{
+	std::map<int, double>::iterator res = timeLog.find(fd);
+	int reqTimeout = _host.getHost().hostTimeout;
+	if (sec - res->second >= reqTimeout)
+	{
+		timeLog.erase(fd);
+		throw errorHandler("Request Timeout");
+	}
+		
+}
+
+bool requestHandler::requestComplete(void)
+{
+	std::stringstream ss(_rawData);
+	std::string method;
+	std::string line;
+	std::getline(ss, method, ' ');
+	if (method == GET || method == HEAD || method == OPTIONS)
+	{
+		while (std::getline(ss, line, '\n'))
+		{
+			if (line == "\r")
+				return true;
+		}
+	}
+	else
+	{
+		int count = 0;
+		while (std::getline(ss, line, '\n'))
+		{
+			if (_endBody.empty())
+				setBodyEnd(line);
+			else
+			{
+				if (line.find("boundary=") != std::string::npos)
+				{
+					if (line.find(_endBody) != std::string::npos)
+						count++;
+				}
+			}
+		}
+		if (count > 1)
+			return true;
+	}
+	return false;
+}
+
+serverConfig const requestHandler::getConfig(void) const {return _host;}
+
+std::string const requestHandler::getEndBody(void) const {return _endBody;}
+
+std::stack<std::string> const requestHandler::getTokens(void) const {return _tokens;}

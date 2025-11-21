@@ -224,3 +224,16 @@ std::string configUtils::getDateTime(void)
 	ss << dM.days[wday] << ", " << day << " " << dM.months[month] << " " << year << " " << formatTime(hour) << ":" << formatTime(minute) << ":" << formatTime(second) << " CET";
 	return ss.str();
 }
+
+double configUtils::getTime(void)
+{
+	std::time_t timer;
+  	struct tm y2k;
+  	double seconds;
+
+  	y2k.tm_hour = 0;   y2k.tm_min = 0; y2k.tm_sec = 0;
+  	y2k.tm_year = 100; y2k.tm_mon = 0; y2k.tm_mday = 1;
+  	std::time(&timer);
+  	seconds = std::difftime(timer,mktime(&y2k));
+	return seconds;
+}

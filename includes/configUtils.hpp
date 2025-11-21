@@ -38,5 +38,6 @@ class configUtils
 		static std::string trim (std::string const &src, std::string const & set);
 		static std::string formatTime(int const &tm);
 		static std::string getDateTime(void);
+		static double getTime(void);
 };
 #endif
