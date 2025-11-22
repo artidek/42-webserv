@@ -1,4 +1,5 @@
 #include "../includes/responseHandler.hpp"
+#include "../includes/requestHandler.hpp"
 #include "../includes/configUtils.hpp"
 #include <iostream>
 #include <algorithm>
@@ -30,21 +31,13 @@ s_response::s_response(void)
 	respCodes[503] = "Service Unavailable";
 }
 
-bool responseHandler::isGetFile = false;
-bool responseHandler::emptyBody = false;
-std::string responseHandler::file;
-t_request responseHandler::request;
-t_response responseHandler::resp;
-serverConfig responseHandler::conf;
+responseHandler::responseHandler(serverConfig const &config, t_request const &req) : request(req) {
 
-responseHandler::responseHandler(serverConfig const &config, t_request const &req) {
-
-	runMethod[GET] = responseHandler::runGet;
-	runMethod[POST] = responseHandler::runPost;
-	runMethod[HEAD] = responseHandler::runHead;
-	runMethod[DELETE] = responseHandler::runDelete;
+	runMethod[GET] = &responseHandler::runGet;
+	runMethod[POST] = &responseHandler::runPost;
+	runMethod[HEAD] = &responseHandler::runHead;
+	runMethod[DELETE] = &responseHandler::runDelete;
 	conf = config;
-	request = req;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -194,7 +187,8 @@ void responseHandler::isMethod(std::string &mtd)
 	std::string m = request.method;
 	if (m == OPTIONS)
 	{
-		m = request.headers["Access-Control-Request-Method"];
+		std::map<std::string, std::string> headers = request.headers;
+		m = headers["Access-Control-Request-Method"];
 		if (m != GET && m != POST && m != DELETE && m != HEAD)
 		{
 			resp.respCode = 400;
@@ -219,7 +213,7 @@ void responseHandler::createResponce(void)
 	try
 	{
 		isMethod(method);
-		runMethod[method]();
+		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
 	{
@@ -254,10 +248,10 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 			else if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 			else 
-				throw errorHandler("send failed");
+				throw errorHandler("Send failed");
 		}
 		if (writeBytes == 0)
-			throw errorHandler("peer closed");
+			throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
 }
@@ -276,3 +270,17 @@ void responseHandler::sendResponse(int const &fd)
 	}
 }
 
+void responseHandler::sendBad(int const &respCode, int const &fd)
+{
+	resp.respCode = respCode;
+	resp.headers["Date:"] = configUtils::getDateTime();
+	resp.headers["Content-Length:"] = "0";
+	resp.headers["Connection:"] = "close";
+	if (respCode != 408 && respCode != 413)
+		fillResponseBody(conf.getErrorPage(respCode));
+	std::string buff;
+	fillSendBuffer(buff);
+	sendToClient(buff.size(), buff.c_str(), fd);
+}
+
+int  responseHandler::getRespCode(void) const {return resp.respCode;}

@@ -154,43 +154,92 @@ bool server::isPendingReq(int const &fd, requestHandler &req)
 	return true;
 }
 
+void server::handleRequest(int const &fd, serverConfig const &conf, requestHandler &rH)
+{
+	try
+	{
+		if (!isPendingReq(fd, rH))
+		{
+			rH = requestHandler(conf);
+			rH.addToTimeLog(fd, configUtils::getTime());
+		}
+		rH.read(fd);
+		if (rH.requestComplete())
+		{
+			if (isPendingReq(fd, rH))
+				pendingRequests.erase(fd);
+			rH.removeFromTimeLog(fd);
+			std::cout << rH.getRawData();
+			rH.parse();
+		}
+		else
+		{
+			if (!isPendingReq(fd, rH))
+				pendingRequests[fd] = rH;
+		}
+	}
+	catch(const std::exception& e)
+	{
+		std::string err(e.what());
+		if (err != "Reading error" || err != "Client closed connection")
+		{
+			rH.removeFromTimeLog(fd);
+			pendingRequests.erase(fd);
+		}
+		close(fd);
+		fdToHost.erase(fd);
+		std::cerr << err << '\n';
+		throw errorHandler(std::string(e.what()));
+	}
+}
+
+void server::handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req)
+{
+	responseHandler resp(conf, req.getReqData());
+	try
+	{
+		resp.createResponce();
+		resp.sendResponse(fd);
+		close(fd);
+		fdToHost.erase(fd);
+		// t_response response = resp.getResponceData();
+		// std::cout << "respnose code " << response.respCode << std::endl;
+		// std::map<std::string, std::string>::iterator it = response.headers.begin();
+		// for(; it != response.headers.end(); ++it)
+		// 	std::cout << it->first << " " << it->second << std::endl;
+		// std::cout << "body: " << response.body;
+	}
+	catch(const std::exception& e)
+	{
+		std::string err(e.what());
+		if (err != "Send failed" || err != "Peer closed")
+			resp.sendBad(resp.getRespCode(), fd);
+		close(fd);
+		fdToHost.erase(fd);
+		std::cerr << err << '\n';
+		throw errorHandler(std::string(e.what()));
+	}
+	
+}
+
 void server::handleClientData(int const &fd)
 {
 	std::map<int, serverConfig>::iterator res;
 	res = fdToHost.find(fd);
-	requestHandler rH;
+	requestHandler req;
 	if (res != fdToHost.end())
 	{
 		try
 		{
-			if (!isPendingReq(fd, rH))
-				rH = requestHandler(res->second);
-			rH.read(fd);
-			if (rH.requestComplete())
-			{
-				std::cout << rH.getRawData();
-				rH.parse();
-				responseHandler resp(res->second, rH.getReqData());
-				resp.createResponce();
-				resp.sendResponse(fd);
-				close(fd);
-				fdToHost.erase(fd);
-			}
-			else
-				pendingRequests[fd] = rH;
-			// t_response response = resp.getResponceData();
-			// std::cout << "respnose code " << response.respCode << std::endl;
-			// std::map<std::string, std::string>::iterator it = response.headers.begin();
-			// for(; it != response.headers.end(); ++it)
-			// 	std::cout << it->first << " " << it->second << std::endl;
-			// std::cout << "body: " << response.body;
-			
+			handleRequest(fd, res->second, req);
+			if (req.requestComplete())
+				handleResponse(fd, res->second, req);
 		}
 		catch(const std::exception& e)
 		{
 			std::cout << e.what() << std::endl;
-			close(fd);
-			fdToHost.erase(fd);
+			// close(fd);
+			// fdToHost.erase(fd);
 		}
 	}
 }

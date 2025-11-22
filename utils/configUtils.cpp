@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include <ctime>
+#include <cstring>
 
 const char * t_dayMonth::days[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
 const char * t_dayMonth::months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -231,6 +232,7 @@ double configUtils::getTime(void)
   	struct tm y2k;
   	double seconds;
 
+	std::memset(&y2k, 0, sizeof(y2k));
   	y2k.tm_hour = 0;   y2k.tm_min = 0; y2k.tm_sec = 0;
   	y2k.tm_year = 100; y2k.tm_mon = 0; y2k.tm_mday = 1;
   	std::time(&timer);

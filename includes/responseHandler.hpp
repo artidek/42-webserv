@@ -3,7 +3,6 @@
 #ifndef RESPONSE_HANDLER_H
 #define RESPONSE_HANDLER_H
 
-#include "requestHandler.hpp"
 #include "serverConfig.hpp"
 
 #define SRV_NM "Server:"
@@ -25,36 +24,40 @@ typedef struct s_response
 	s_response(void);
 } t_response;
 
+typedef struct s_request t_request;
+
 class responseHandler
 {
 	private:
-		static bool isGetFile;
-		static bool emptyBody;
-		static std::string file;
-		std::map<std::string, void(*)(void)>runMethod;
-		static serverConfig conf;
-		static t_request request;
-		static t_response resp;
+		bool isGetFile;
+		bool emptyBody;
+		std::string file;
+		std::map<std::string, void (responseHandler::*)(void)>runMethod;
+		serverConfig conf;
+		t_request const &request;
+	 	t_response resp;
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
-		static void runGet();
-		static void runPost();
-		static void runHead();
-		static void runDelete();
+		void runGet();
+		void runPost();
+		void runHead();
+		void runDelete();
 		void isMethod(std::string &mtd);
-		static void isRoute(std::string const &rt, t_route &route);
-		static void allowedMethod(std::string const &root);
-		static void ifGetFile(std::string const &rt, std::string &route);
-		static void fillResponseBody(std::string const &filePath);
-		static std::string eTag(std::string const &file);
-		static void fillSendBuffer(std::string &buffer);
-		static void sendToClient(size_t const &size, const char *buff, int const &fd); 
+		void isRoute(std::string const &rt, t_route &route);
+		void allowedMethod(std::string const &root);
+		void ifGetFile(std::string const &rt, std::string &route);
+		void fillResponseBody(std::string const &filePath);
+		std::string eTag(std::string const &file);
+		void fillSendBuffer(std::string &buffer);
+		void sendToClient(size_t const &size, const char *buff, int const &fd); 
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);
 		void createResponce(void);
 		void sendResponse(int const &fd);
 		t_response const getResponceData(void) const;
+		void sendBad(int const &respCode, int const &fd);
+		int  getRespCode() const;
 };
 
 #endif

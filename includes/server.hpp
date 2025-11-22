@@ -6,6 +6,7 @@
 #include "serverConfig.hpp"
 #include "requestHandler.hpp"
 #include "responseHandler.hpp"
+#include "configUtils.hpp"
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -37,6 +38,8 @@ class server
 		bool listenSocket(int const &fd, serverConfig &conf);
 		void handleClientData(int const &fd);
 		bool isPendingReq(int const &fd, requestHandler &req);
+		void handleRequest(int const &fd, serverConfig const &conf, requestHandler &rH);
+		void handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req);
 	public:
 		server(std::vector<serverConfig> const &conf);
 		~server(void);

@@ -4,6 +4,7 @@
 #define REQUEST_HANDLER_H
 
 #include "serverConfig.hpp"
+#include "responseHandler.hpp"
 #include <stack>
 #include <ctime>
 
@@ -43,7 +44,6 @@ class requestHandler
 		void getFileName(t_reqBody &reqBody, std::string value);
 		void setBodyEnd(std::string token);
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
-		void addToTimeLog(int fd, double sec);
 		void checkTimeout(int fd, double sec);
 	public:
 		requestHandler(void);
@@ -59,6 +59,8 @@ class requestHandler
 		serverConfig const getConfig(void) const;
 		std::string const getEndBody(void) const;
 		std::stack<std::string> const getTokens(void) const;
+		void addToTimeLog(int fd, double sec);
+		void removeFromTimeLog(int const & fd);
 };
 
 #endif

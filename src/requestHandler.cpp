@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <iostream>
+#include <unistd.h>
 
 std::map<int, double>requestHandler::timeLog;
 std::map<std::string, std::string> requestHandler::_headers = initHeaders();
@@ -62,7 +63,6 @@ void requestHandler::read(int const &fd)
 	int readBytes = 0;
 	int totalRead = 0;
 
-	addToTimeLog(fd, configUtils::getTime());
 	while(true)
 	{
 		char buffer[BUFFER_SIZE + 1];
@@ -90,10 +90,10 @@ void requestHandler::read(int const &fd)
 	}
 	catch(const std::exception& e)
 	{
-		//need to implement bad response here
+		responseHandler rH(_host, _request);
+		rH.sendBad(408, fd);
 		throw errorHandler(std::string(e.what()));
 	}
-	
 }
 
 void requestHandler::setBodyEnd(std::string token)
@@ -245,6 +245,7 @@ void requestHandler::checkTimeout(int fd, double sec)
 {
 	std::map<int, double>::iterator res = timeLog.find(fd);
 	int reqTimeout = _host.getHost().hostTimeout;
+	std::cout << "time diff " << sec - res->second << std::endl;
 	if (sec - res->second >= reqTimeout)
 	{
 		timeLog.erase(fd);
@@ -294,3 +295,5 @@ serverConfig const requestHandler::getConfig(void) const {return _host;}
 std::string const requestHandler::getEndBody(void) const {return _endBody;}
 
 std::stack<std::string> const requestHandler::getTokens(void) const {return _tokens;}
+
+void requestHandler::removeFromTimeLog(int const &fd) {timeLog.erase(fd);}
