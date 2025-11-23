@@ -6,7 +6,7 @@
 #include <ctime>
 #include <cstring>
 
-const char * t_dayMonth::days[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+const char * t_dayMonth::days[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const char * t_dayMonth::months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 bool configUtils::isCurlBr(unsigned char c)
@@ -211,7 +211,7 @@ std::string configUtils::formatTime(int const &tm)
 std::string configUtils::getDateTime(void)
 {
 	std::time_t now = std::time(NULL);
-    std::tm *ptm = std::localtime(&now);
+    std::tm *ptm = std::gmtime(&now);
 	std::stringstream ss;
 	t_dayMonth dM;
 
@@ -222,7 +222,7 @@ std::string configUtils::getDateTime(void)
     int hour   = ptm->tm_hour;
     int minute = ptm->tm_min;
     int second = ptm->tm_sec;
-	ss << dM.days[wday] << ", " << day << " " << dM.months[month] << " " << year << " " << formatTime(hour) << ":" << formatTime(minute) << ":" << formatTime(second) << " CET";
+	ss << dM.days[wday] << ", " << day << " " << dM.months[month] << " " << year << " " << formatTime(hour) << ":" << formatTime(minute) << ":" << formatTime(second) << " GMT";
 	return ss.str();
 }
 

@@ -90,8 +90,6 @@ void requestHandler::read(int const &fd)
 	}
 	catch(const std::exception& e)
 	{
-		responseHandler rH(_host, _request);
-		rH.sendBad(408, fd);
 		throw errorHandler(std::string(e.what()));
 	}
 }

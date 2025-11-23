@@ -185,8 +185,16 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		{
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
+			responseHandler badResp(rH.getConfig(), rH.getReqData());
+			badResp.sendBad(408, fd);
+			if (badResp.responseComplete())
+			{
+				epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+				close(fd);
+			}
 		}
-		close(fd);
+		else
+			close(fd);
 		fdToHost.erase(fd);
 		std::cerr << err << '\n';
 		throw errorHandler(std::string(e.what()));
@@ -200,6 +208,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	{
 		resp.createResponce();
 		resp.sendResponse(fd);
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);
 		fdToHost.erase(fd);
 		// t_response response = resp.getResponceData();
@@ -214,6 +223,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 		std::string err(e.what());
 		if (err != "Send failed" || err != "Peer closed")
 			resp.sendBad(resp.getRespCode(), fd);
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);
 		fdToHost.erase(fd);
 		std::cerr << err << '\n';

@@ -31,6 +31,7 @@ class responseHandler
 	private:
 		bool isGetFile;
 		bool emptyBody;
+		bool sendComplete;
 		std::string file;
 		std::map<std::string, void (responseHandler::*)(void)>runMethod;
 		serverConfig conf;
@@ -58,6 +59,7 @@ class responseHandler
 		t_response const getResponceData(void) const;
 		void sendBad(int const &respCode, int const &fd);
 		int  getRespCode() const;
+		bool responseComplete(void);
 };
 
 #endif

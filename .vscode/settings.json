@@ -49,6 +49,7 @@
 		"ctime": "cpp",
 		"iostream": "cpp",
 		"ranges": "cpp",
-		"span": "cpp"
+		"span": "cpp",
+		"cstring": "cpp"
 	}
 }

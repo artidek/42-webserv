@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 s_response::s_response(void)
 {
@@ -38,6 +39,9 @@ responseHandler::responseHandler(serverConfig const &config, t_request const &re
 	runMethod[HEAD] = &responseHandler::runHead;
 	runMethod[DELETE] = &responseHandler::runDelete;
 	conf = config;
+	isGetFile = false;
+	emptyBody = false;
+	sendComplete = false;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -239,6 +243,7 @@ void responseHandler::fillSendBuffer(std::string &buffer)
 void responseHandler::sendToClient(size_t const &size, const char *buff, int const &fd)
 {
 	size_t total = 0;
+	std::cout << buff;
 	while (total < size)
 	{
 		int writeBytes = send(fd, buff + total, size - total, 0);
@@ -254,6 +259,8 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 			throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
+	if (std::string(buff).size() == total)
+		sendComplete = true;
 }
 
 void responseHandler::sendResponse(int const &fd)
@@ -274,13 +281,21 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 {
 	resp.respCode = respCode;
 	resp.headers["Date:"] = configUtils::getDateTime();
-	resp.headers["Content-Length:"] = "0";
 	resp.headers["Connection:"] = "close";
 	if (respCode != 408 && respCode != 413)
+	{
+		std::stringstream ss;
 		fillResponseBody(conf.getErrorPage(respCode));
+		ss << resp.body.size();
+		ss >> resp.headers["Content-Length:"];
+	}
+	else
+		resp.headers["Content-Length:"] = "0";
 	std::string buff;
 	fillSendBuffer(buff);
 	sendToClient(buff.size(), buff.c_str(), fd);
 }
 
 int  responseHandler::getRespCode(void) const {return resp.respCode;}
+
+bool responseHandler::responseComplete(void) {return sendComplete;}
