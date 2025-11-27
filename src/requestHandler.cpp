@@ -141,11 +141,11 @@ void requestHandler::fillMethodRoute(std::string headerProp)
 {
 	std::stringstream ss(headerProp);
 	std::string method;
-	std::string route;
-	if (std::getline(ss, method, ' ') && std::getline(ss, route, ' '))
+	std::string rawRoute;
+	if (std::getline(ss, method, ' ') && std::getline(ss, rawRoute, ' '))
 	{
 		_request.method = method;
-		_request.route = route;
+		_request.route = rawRoute;
 	}
 }
 
@@ -189,7 +189,7 @@ t_reqBody requestHandler::fillReqBody(void)
 		_tokens.pop();
 		if (token.find(_endBody) != std::string::npos)
 			break;
-		else 
+		else
 		{
 			std::string h;
 			std::string v;
@@ -249,7 +249,7 @@ void requestHandler::checkTimeout(int fd, double sec)
 		timeLog.erase(fd);
 		throw errorHandler("Request Timeout");
 	}
-		
+
 }
 
 bool requestHandler::requestComplete(void)

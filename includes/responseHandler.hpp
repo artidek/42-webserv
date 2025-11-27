@@ -50,7 +50,8 @@ class responseHandler
 		void fillResponseBody(std::string const &filePath);
 		std::string eTag(std::string const &file);
 		void fillSendBuffer(std::string &buffer);
-		void sendToClient(size_t const &size, const char *buff, int const &fd); 
+		void sendToClient(size_t const &size, const char *buff, int const &fd);
+		bool isCgi(t_route const &route, std::string const &file);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

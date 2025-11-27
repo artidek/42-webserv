@@ -143,7 +143,14 @@ void responseHandler::runGet(void)
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
 		if (isGetFile)
-			fillResponseBody(route.newRoot + file);
+		{
+			if (isCgi(route, file))
+			{
+				//here must be cgi handler
+			}
+			else
+				fillResponseBody(route.newRoot + file);
+		}
 		else
 		{
 			if (route.page == "none")
@@ -152,7 +159,14 @@ void responseHandler::runGet(void)
 				throw errorHandler("Forbiddden");
 			}
 			else
-				fillResponseBody(route.newRoot + route.page);
+			{
+				if (isCgi(route, route.page))
+				{
+					//here must be cgi handler
+				}
+				else
+					fillResponseBody(route.newRoot + route.page);
+			}
 		}
 		resp.headers["Server:"] = SRV;
 		resp.headers["Date:"] = configUtils::getDateTime();
@@ -173,17 +187,121 @@ void responseHandler::runGet(void)
 
 void responseHandler::runPost(void)
 {
-
+	t_route route;
+	try
+	{
+		isRoute(request.route, route);
+		allowedMethod(route.newRoot);
+		if (isGetFile)
+		{
+			if (isCgi(route, file))
+			{
+				//here must be cgi handler
+			}
+			else
+			{
+				resp.respCode = 400;
+				throw errorHandler ("Bad Request");
+			}
+		}
+		else
+		{
+			if (route.page == "none")
+			{
+				resp.respCode = 403;
+				throw errorHandler("Forbiddden");
+			}
+			else
+			{
+				if (isCgi(route, file))
+				{
+					//here must be cgi handler
+				}
+				else
+				{
+					resp.respCode = 400;
+					throw errorHandler ("Bad Request");
+				}
+			}
+		}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
 }
 
 void responseHandler::runHead(void)
 {
+	t_route route;
+	try
+	{
+		isRoute(request.route, route);
+		allowedMethod(route.newRoot);
+		resp.respCode = 204;
+		if (route.page == "none")
+		{
+			resp.respCode = 403;
+			throw errorHandler("Forbiddden");
+		}
+		resp.headers["Server:"] = SRV;
+		resp.headers["Date:"] = configUtils::getDateTime();
+		resp.headers["Content-Length:"] = "0";
+		resp.headers["Connection:"] = "close";
+		resp.headers["ETag:"] = eTag(route.newRoot + route.page);
+		resp.headers["Accept-Ranges:"] = "bytes";
 
+	}
+	catch(const std::exception& e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
 }
 
 void responseHandler::runDelete(void)
 {
-
+	t_route route;
+	try
+	{
+		isRoute(request.route, route);
+		allowedMethod(route.newRoot);
+		if (isGetFile)
+		{
+			if (isCgi(route, file))
+			{
+				//here must be cgi handler
+			}
+			else
+			{
+				resp.respCode = 400;
+				throw errorHandler ("Bad Request");
+			}
+		}
+		else
+		{
+			if (route.page == "none")
+			{
+				resp.respCode = 403;
+				throw errorHandler("Forbiddden");
+			}
+			else
+			{
+				if (isCgi(route, file))
+				{
+					//here must be cgi handler
+				}
+				else
+				{
+					resp.respCode = 400;
+					throw errorHandler ("Bad Request");
+				}
+			}
+		}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
 }
 
 void responseHandler::isMethod(std::string &mtd)
@@ -252,7 +370,7 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 			if (errno == EINTR) continue;
 			else if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
-			else 
+			else
 				throw errorHandler("Send failed");
 		}
 		if (writeBytes == 0)
@@ -299,3 +417,33 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 int  responseHandler::getRespCode(void) const {return resp.respCode;}
 
 bool responseHandler::responseComplete(void) {return sendComplete;}
+
+bool responseHandler::isCgi(t_route const &route, std::string const &file)
+{
+	try
+	{
+		t_cgi configs = conf.getCgiConf();
+		if (configs.cgiAllowed == true)
+		{
+			t_location loc = conf.getLocation(route.newRoot);
+			std::stringstream ss(file);
+			std::string name;
+			std::string ext;
+			if (std::getline(ss, name, '.') && std::getline(ss, ext))
+			{
+				std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
+				if (res != configs.extensions.end())
+				{
+					std::string fullPath = route.newRoot + file;
+					if (access(fullPath.c_str(), X_OK) > 0)
+						return true;
+				}
+			}
+		}
+	}
+	catch(const std::exception& e)
+	{
+		return false;
+	}
+	return false;
+}

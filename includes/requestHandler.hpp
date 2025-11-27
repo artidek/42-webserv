@@ -22,6 +22,8 @@ typedef struct s_request
 {
 	std::string method;
 	std::string route;
+	std::string query;
+	std::string path_info;
 	t_reqBody body;
 	std::map<std::string, std::string> headers;
 } t_request;
@@ -36,6 +38,9 @@ class requestHandler
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
+		std::string _route;
+		std::string _query;
+		std::string _pathInfo;
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
