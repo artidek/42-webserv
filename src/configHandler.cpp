@@ -263,12 +263,6 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 			configUtils::getFromList(cgi, blockTokens);
 			count++;
 		}
-		else if (propName == "root")
-		{
-			configUtils::ifDir(prop);
-			cgi.root = prop;
-			count++;
-		}
 		else
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}

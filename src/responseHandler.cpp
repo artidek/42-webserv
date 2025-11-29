@@ -39,7 +39,6 @@ responseHandler::responseHandler(serverConfig const &config, t_request const &re
 	runMethod[HEAD] = &responseHandler::runHead;
 	runMethod[DELETE] = &responseHandler::runDelete;
 	conf = config;
-	isGetFile = false;
 	emptyBody = false;
 	sendComplete = false;
 }
@@ -79,33 +78,11 @@ void responseHandler::allowedMethod(std::string const &root)
 	}
 }
 
-void responseHandler::ifGetFile(std::string const &rt, std::string &route)
+void responseHandler::isRoute(t_route &route)
 {
-	size_t split = rt.find_last_of("/");
-	file = rt.substr(split + 1);
-	if (file.find(".") != std::string::npos)
-	{
-		isGetFile = true;
-		route = rt.substr(0, split);
-		return;
-	}
-	isGetFile = false;
-	route = rt;
-}
-
-void responseHandler::isRoute(std::string const &rt, t_route &route)
-{
-	std::string cleanedRoute;
-	ifGetFile(rt, cleanedRoute);
 	try
 	{
-
-		route = conf.getRoute(cleanedRoute);
-		if (isGetFile)
-		{
-			std::string filePath = route.newRoot + file;
-			configUtils::ifFile(filePath);
-		}
+		route = conf.getRoute(request.route);
 	}
 	catch(const std::exception& e)
 	{
@@ -136,21 +113,15 @@ void responseHandler::fillResponseBody(std::string const & filePath)
 void responseHandler::runGet(void)
 {
 	t_route route;
+	std::string path;
 	try
 	{
-		isRoute(request.route, route);
+		isRoute(route);
 		allowedMethod(route.newRoot);
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
-		if (isGetFile)
-		{
-			if (isCgi(route, file))
-			{
-				//here must be cgi handler
-			}
-			else
-				fillResponseBody(route.newRoot + file);
-		}
+		if (!request.page.empty())
+			handleFile(route, true);	
 		else
 		{
 			if (route.page == "none")
@@ -159,14 +130,7 @@ void responseHandler::runGet(void)
 				throw errorHandler("Forbiddden");
 			}
 			else
-			{
-				if (isCgi(route, route.page))
-				{
-					//here must be cgi handler
-				}
-				else
-					fillResponseBody(route.newRoot + route.page);
-			}
+				handleFile(route, false);
 		}
 		resp.headers["Server:"] = SRV;
 		resp.headers["Date:"] = configUtils::getDateTime();
@@ -188,13 +152,15 @@ void responseHandler::runGet(void)
 void responseHandler::runPost(void)
 {
 	t_route route;
+	std::string path;
 	try
 	{
-		isRoute(request.route, route);
+		isRoute(route);
 		allowedMethod(route.newRoot);
-		if (isGetFile)
+		if (!request.page.empty())
 		{
-			if (isCgi(route, file))
+			path = configUtils::buildPath(route.newRoot, request.page);
+			if (isCgi(route, path))
 			{
 				//here must be cgi handler
 			}
@@ -213,7 +179,8 @@ void responseHandler::runPost(void)
 			}
 			else
 			{
-				if (isCgi(route, file))
+				path = configUtils::buildPath(route.newRoot, route.page);
+				if (isCgi(route, path))
 				{
 					//here must be cgi handler
 				}
@@ -236,7 +203,7 @@ void responseHandler::runHead(void)
 	t_route route;
 	try
 	{
-		isRoute(request.route, route);
+		isRoute(route);
 		allowedMethod(route.newRoot);
 		resp.respCode = 204;
 		if (route.page == "none")
@@ -261,12 +228,14 @@ void responseHandler::runHead(void)
 void responseHandler::runDelete(void)
 {
 	t_route route;
+	std::string path;
 	try
 	{
-		isRoute(request.route, route);
+		isRoute(route);
 		allowedMethod(route.newRoot);
-		if (isGetFile)
+		if (!request.page.empty())
 		{
+			path = configUtils::buildPath(route.newRoot, request.page);
 			if (isCgi(route, file))
 			{
 				//here must be cgi handler
@@ -286,7 +255,8 @@ void responseHandler::runDelete(void)
 			}
 			else
 			{
-				if (isCgi(route, file))
+				path = configUtils::buildPath(route.newRoot, route.page);
+				if (isCgi(route, path))
 				{
 					//here must be cgi handler
 				}
@@ -426,7 +396,7 @@ bool responseHandler::isCgi(t_route const &route, std::string const &file)
 		if (configs.cgiAllowed == true)
 		{
 			t_location loc = conf.getLocation(route.newRoot);
-			std::stringstream ss(file);
+			std::stringstream ss(request.page);
 			std::string name;
 			std::string ext;
 			if (std::getline(ss, name, '.') && std::getline(ss, ext))
@@ -434,8 +404,7 @@ bool responseHandler::isCgi(t_route const &route, std::string const &file)
 				std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
 				if (res != configs.extensions.end())
 				{
-					std::string fullPath = route.newRoot + file;
-					if (access(fullPath.c_str(), X_OK) > 0)
+					if (access(file.c_str(), X_OK) > 0)
 						return true;
 				}
 			}
@@ -446,4 +415,36 @@ bool responseHandler::isCgi(t_route const &route, std::string const &file)
 		return false;
 	}
 	return false;
+}
+
+void responseHandler::handleFile(t_route const &route, bool reqPage)
+{
+	try
+	{
+		if (reqPage)
+		{
+			std::string path = configUtils::buildPath(route.newRoot, request.page);
+			if (isCgi(route, path))
+			{
+				//cgi handler here
+			}
+			else
+				fillResponseBody(path);
+		}
+		else
+		{
+			std::string path = configUtils::buildPath(route.newRoot, route.page);
+			if (isCgi(route, path))
+			{
+				//cgi handler here
+			}
+			else
+				fillResponseBody(path);
+		}
+	}
+	catch(const std::exception& e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
+	
 }

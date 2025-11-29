@@ -52,10 +52,9 @@ serverConfig::serverConfig(void) {
 	errorPages[500] = "etc/error/500.html";
 	errorPages[501] = "etc/error/501.html";
 	errorPages[502] = "etc/error/501.html";
-	cgiConf.cgiAllowed = "on";
+	cgiConf.cgiAllowed = "off";
 	cgiConf.extensions.push_back("php");
 	cgiConf.extensions.push_back("py");
-	cgiConf.root = "etc/cgi_bin";
 }
 
 serverConfig::serverConfig(serverConfig const &copy) : locations(copy.getLocations()), routes(copy.getRoutes()), errorPages(copy.getErrorPages()), host(copy.getHost()), cgiConf(copy.getCgiConf()){}

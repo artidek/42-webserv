@@ -23,6 +23,7 @@ typedef struct s_request
 	std::string method;
 	std::string route;
 	std::string query;
+	std::string page;
 	std::string path_info;
 	t_reqBody body;
 	std::map<std::string, std::string> headers;
@@ -38,9 +39,6 @@ class requestHandler
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
-		std::string _route;
-		std::string _query;
-		std::string _pathInfo;
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
@@ -50,6 +48,9 @@ class requestHandler
 		void setBodyEnd(std::string token);
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
 		void checkTimeout(int fd, double sec);
+		void parseRoute(std::string const &rawRoute);
+		void extractPathInfo(std::stringstream const &ss);
+		void buildRoute(std::vector<std::string> const &tokens);
 	public:
 		requestHandler(void);
 		requestHandler(serverConfig const &copy);

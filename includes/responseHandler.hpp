@@ -29,7 +29,6 @@ typedef struct s_request t_request;
 class responseHandler
 {
 	private:
-		bool isGetFile;
 		bool emptyBody;
 		bool sendComplete;
 		std::string file;
@@ -44,13 +43,13 @@ class responseHandler
 		void runHead();
 		void runDelete();
 		void isMethod(std::string &mtd);
-		void isRoute(std::string const &rt, t_route &route);
+		void isRoute(t_route &route);
 		void allowedMethod(std::string const &root);
-		void ifGetFile(std::string const &rt, std::string &route);
 		void fillResponseBody(std::string const &filePath);
 		std::string eTag(std::string const &file);
 		void fillSendBuffer(std::string &buffer);
 		void sendToClient(size_t const &size, const char *buff, int const &fd);
+		void validFile(t_route const &route);
 		bool isCgi(t_route const &route, std::string const &file);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);

@@ -239,3 +239,13 @@ double configUtils::getTime(void)
   	seconds = std::difftime(timer,mktime(&y2k));
 	return seconds;
 }
+
+std::string configUtils::buildPath(std::string const &path, std::string const &name)
+{
+	std::string res;
+	if (path[path.size() - 1] != '/')
+		res = path + "/" + name;
+	else
+		res = path + name;
+	return res;
+}

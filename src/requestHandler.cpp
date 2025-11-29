@@ -145,7 +145,7 @@ void requestHandler::fillMethodRoute(std::string headerProp)
 	if (std::getline(ss, method, ' ') && std::getline(ss, rawRoute, ' '))
 	{
 		_request.method = method;
-		_request.route = rawRoute;
+		parseRoute(rawRoute);
 	}
 }
 
@@ -295,3 +295,49 @@ std::string const requestHandler::getEndBody(void) const {return _endBody;}
 std::stack<std::string> const requestHandler::getTokens(void) const {return _tokens;}
 
 void requestHandler::removeFromTimeLog(int const &fd) {timeLog.erase(fd);}
+
+void requestHandler::parseRoute(std::string const &rawRoute)
+{
+	std::vector<std::string> tokens;
+	std::string token;
+	std::stringstream ss;
+	size_t found = rawRoute.find("?");
+	if (found != std::string::npos)
+	{
+		ss << rawRoute.substr(0, found);
+		_request.query = rawRoute.substr(found + 1);
+	}
+	else
+		ss << rawRoute;
+	while (std::getline(ss, token, '/'))
+	{
+		if (token.find(".") != std::string::npos)
+		{
+			_request.page = token;
+			extractPathInfo(ss);
+			break;
+		}
+		if (!token.empty())
+			tokens.push_back(token);
+	}
+	buildRoute(tokens);
+}
+
+void requestHandler::extractPathInfo(std::stringstream const &ss)
+{
+	std::string pathInfo = "/";
+	if (!ss.str().empty())
+	{
+		pathInfo += ss.str();
+		_request.path_info = pathInfo;
+	}	
+}
+
+void requestHandler::buildRoute(std::vector<std::string> const &tokens)
+{
+	for (int i = 0; i < tokens.size(); i++)
+	{
+		_request.route += "/";
+		_request.route += tokens[i];
+	}
+}

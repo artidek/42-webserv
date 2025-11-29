@@ -39,5 +39,6 @@ class configUtils
 		static std::string formatTime(int const &tm);
 		static std::string getDateTime(void);
 		static double getTime(void);
+		static std::string buildPath(std::string const &path, std::string const &name);
 };
 #endif
