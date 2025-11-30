@@ -69,4 +69,6 @@ class requestHandler
 		void removeFromTimeLog(int const & fd);
 };
 
+std::ostream &operator<< (std::ostream &o, requestHandler const &req);
+
 #endif

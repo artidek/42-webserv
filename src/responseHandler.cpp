@@ -194,7 +194,7 @@ void responseHandler::runPost(void)
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << '\n';
+		throw errorHandler(std::string(e.what()));
 	}
 }
 
@@ -331,7 +331,6 @@ void responseHandler::fillSendBuffer(std::string &buffer)
 void responseHandler::sendToClient(size_t const &size, const char *buff, int const &fd)
 {
 	size_t total = 0;
-	std::cout << buff;
 	while (total < size)
 	{
 		int writeBytes = send(fd, buff + total, size - total, 0);

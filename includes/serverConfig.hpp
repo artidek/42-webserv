@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/29 12:54:52 by aobshatk         ###   ########.fr       */
+/*   Updated: 2025/11/30 11:22:07 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ class serverConfig
 		void setCgi(t_cgi cgiConf);
 		void checkConfig();
 		t_route getRoute(std::string route) const;
-		t_location getLocation(std::string location) const;
+		t_location getLocation(std::string location);
 		std::map <std::string, std::string> getEnv(void) const;
 		t_cgi getCgiConf(void) const;
 		t_host getHost(void) const;

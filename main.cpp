@@ -25,4 +25,19 @@ int main (int argc, char **argv)
 			return 1;
 		}
 	}
+	else
+	{
+		try
+		{
+			configParser::parseConfig(argv[1]);
+			server srv(configParser::getConfigs());
+			srv.set();
+			srv.run();
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+			return 1;
+		}
+	}
 }

@@ -182,3 +182,11 @@ void serverConfig::checkConfig()
 	if(host.empty())
 		throw errorHandler(MISSING_PROPERTY, " emty host config"); 
 }
+
+t_location serverConfig::getLocation(std::string location) 
+{
+	std::map<std::string, t_location>::iterator res = locations.find(location);
+	if (res == locations.end())
+		throw errorHandler(NO_DATA, location);
+	return res->second;
+}

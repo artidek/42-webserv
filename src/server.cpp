@@ -163,13 +163,14 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			rH = requestHandler(conf);
 			rH.addToTimeLog(fd, configUtils::getTime());
 		}
+		else
+			rH = pendingRequests[fd];
 		rH.read(fd);
 		if (rH.requestComplete())
 		{
 			if (isPendingReq(fd, rH))
 				pendingRequests.erase(fd);
 			rH.removeFromTimeLog(fd);
-			std::cout << rH.getRawData();
 			rH.parse();
 		}
 		else
@@ -177,6 +178,8 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			if (!isPendingReq(fd, rH))
 				pendingRequests[fd] = rH;
 		}
+		//std::cout << rH << std::endl;
+		std::cout << rH.getRawData();
 	}
 	catch(const std::exception& e)
 	{
@@ -222,7 +225,10 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	{
 		std::string err(e.what());
 		if (err != "Send failed" || err != "Peer closed")
+		{
 			resp.sendBad(resp.getRespCode(), fd);
+			std::cout << "error " << resp.getRespCode() << std::endl;
+		}
 		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 		close(fd);
 		fdToHost.erase(fd);
@@ -272,7 +278,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
                 if (conn_socket == -1) break;
 				setNonBlocking(conn_socket); //sets connection socket nonblocking
 				struct epoll_event ev_client;
-            	ev_client.events = EPOLLIN | EPOLLET;  // edge-triggered read
+            	ev_client.events = EPOLLIN;  // edge-triggered read
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);

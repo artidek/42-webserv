@@ -1,0 +1,67 @@
+/* Basic page styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #fdfdfd;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Navigation bar */
+nav {
+    margin-top: 20px;
+    padding: 10px 0;
+}
+
+nav a {
+    text-decoration: none;
+    color: #0077cc;
+    margin-right: 15px;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+/* Headings */
+h1 {
+    color: #222;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Contact form styling */
+form {
+    margin-top: 20px;
+    max-width: 400px;
+}
+
+input[type="text"], textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    margin-top: 12px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #0077cc;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #005fa3;
+}
+
+/* Test image */
+img.test-img {
+    width: 300px;
+    display: block;
+    margin-top: 20px;
+    border-radius: 6px;
+}

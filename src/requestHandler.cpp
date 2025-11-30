@@ -69,7 +69,7 @@ void requestHandler::read(int const &fd)
 		readBytes = recv(fd, buffer, sizeof(buffer), 0);
 		if (readBytes > 0 && totalRead <= readSize)
 		{
-			_rawData += buffer;
+			_rawData.append(buffer, readBytes);
 			totalRead += readBytes;
 		}
 		else if (readBytes == 0)
@@ -214,6 +214,7 @@ void requestHandler::parse(void)
 	while (!_tokens.empty())
 	{
 		token = _tokens.top();
+		std::cout << "token " << token << std::endl;
 		_tokens.pop();
 		std::stringstream temp(token);
 		std::string headerProp;
@@ -321,12 +322,13 @@ void requestHandler::parseRoute(std::string const &rawRoute)
 			tokens.push_back(token);
 	}
 	buildRoute(tokens);
+	std::cout << _request.route << " route\n";
 }
 
 void requestHandler::extractPathInfo(std::stringstream const &ss)
 {
 	std::string pathInfo = "/";
-	if (!ss.str().empty())
+	if (!ss.eof())
 	{
 		pathInfo += ss.str();
 		_request.path_info = pathInfo;
@@ -335,9 +337,23 @@ void requestHandler::extractPathInfo(std::stringstream const &ss)
 
 void requestHandler::buildRoute(std::vector<std::string> const &tokens)
 {
-	for (int i = 0; i < tokens.size(); i++)
+	if (tokens.empty())
+		_request.route = "/";
+	for (size_t i = 0; i < tokens.size(); i++)
 	{
 		_request.route += "/";
 		_request.route += tokens[i];
 	}
+}
+
+std::ostream &operator<< (std::ostream &o, requestHandler const &req)
+{
+	o << "method: " << req.getReqData().method << std::endl;
+	o << "route: " << req.getReqData().route << std::endl;
+	o << "query: " << req.getReqData().query << std::endl;
+	o << "page: " << req.getReqData().page << std::endl;
+	o << "path_info: " << req.getReqData().path_info<< std::endl;
+	o << "body content: " << req.getReqData().body.content << std::endl;
+	o << "body filename: " << req.getReqData().body.fileName << std::endl;
+	return o;
 }

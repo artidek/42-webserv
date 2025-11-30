@@ -51,6 +51,7 @@ class responseHandler
 		void sendToClient(size_t const &size, const char *buff, int const &fd);
 		void validFile(t_route const &route);
 		bool isCgi(t_route const &route, std::string const &file);
+		void handleFile(t_route const &route, bool reqPage);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

@@ -266,8 +266,8 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 		else
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
-	if (count < 3)
-		throw errorHandler(MISSING_PROPERTY, " location");
+	if (count < 2)
+		throw errorHandler(MISSING_PROPERTY, " cgi config");
 }
 
 serverConfig configHandler::getHost(void)
