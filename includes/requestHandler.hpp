@@ -9,7 +9,7 @@
 #include <ctime>
 
 
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE  8//8192
 
 typedef struct s_reqBody
 {

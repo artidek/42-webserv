@@ -175,6 +175,14 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		}
 		else
 		{
+			if (rH.getRawData().find("Content-Length:") != std::string::npos)
+			{
+				std::string response("HTTP/1.1 100 Continue\r\n\r\n");
+				responseHandler singleResp(rH.getConfig(), rH.getReqData());
+				singleResp.sendToClient(response.size(), response.c_str(), fd);
+				if (singleResp.responseComplete())
+					std::cout << "request not complete!!!!\n";
+			}
 			if (!isPendingReq(fd, rH))
 				pendingRequests[fd] = rH;
 		}
@@ -235,7 +243,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 		std::cerr << err << '\n';
 		throw errorHandler(std::string(e.what()));
 	}
-	
+
 }
 
 void server::handleClientData(int const &fd)
@@ -278,7 +286,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
                 if (conn_socket == -1) break;
 				setNonBlocking(conn_socket); //sets connection socket nonblocking
 				struct epoll_event ev_client;
-            	ev_client.events = EPOLLIN;  // edge-triggered read
+            	ev_client.events = EPOLLIN | EPOLLET;  // edge-triggered read
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);

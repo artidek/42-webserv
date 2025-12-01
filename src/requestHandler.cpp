@@ -59,18 +59,15 @@ std::string const &requestHandler::getRawData(void) const { return _rawData; }
 
 void requestHandler::read(int const &fd)
 {
-	int readSize = _host.getHost().maxReqBody + BUFFER_SIZE;
 	int readBytes = 0;
-	int totalRead = 0;
 
 	while(true)
 	{
-		char buffer[BUFFER_SIZE + 1];
+		char buffer[BUFFER_SIZE];
 		readBytes = recv(fd, buffer, sizeof(buffer), 0);
-		if (readBytes > 0 && totalRead <= readSize)
+		if (readBytes > 0)
 		{
 			_rawData.append(buffer, readBytes);
-			totalRead += readBytes;
 		}
 		else if (readBytes == 0)
 			throw errorHandler("Client closed connection");
@@ -92,6 +89,8 @@ void requestHandler::read(int const &fd)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
+	if (errno == EAGAIN || errno == EWOULDBLOCK)
+		std::cout << "socket drained succeffully \n";
 }
 
 void requestHandler::setBodyEnd(std::string token)
@@ -332,7 +331,7 @@ void requestHandler::extractPathInfo(std::stringstream const &ss)
 	{
 		pathInfo += ss.str();
 		_request.path_info = pathInfo;
-	}	
+	}
 }
 
 void requestHandler::buildRoute(std::vector<std::string> const &tokens)
