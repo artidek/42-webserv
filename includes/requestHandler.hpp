@@ -9,7 +9,7 @@
 #include <ctime>
 
 
-#define BUFFER_SIZE  8//8192
+#define BUFFER_SIZE  8192
 
 typedef struct s_reqBody
 {
@@ -39,13 +39,15 @@ class requestHandler
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
+		int _contLen;
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
-		t_reqBody fillReqBody(void);
+		t_reqBody fillReqBody(bool upload);
 		void fillMethodRoute(std::string headerProp);
 		void getFileName(t_reqBody &reqBody, std::string value);
 		void setBodyEnd(std::string token);
+		void setContLen(void);
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
 		void checkTimeout(int fd, double sec);
 		void parseRoute(std::string const &rawRoute);
@@ -67,6 +69,7 @@ class requestHandler
 		std::stack<std::string> const getTokens(void) const;
 		void addToTimeLog(int fd, double sec);
 		void removeFromTimeLog(int const & fd);
+		int const getContLen() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

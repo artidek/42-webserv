@@ -30,7 +30,7 @@ bool t_reqBody::empty(void)
 	return true;
 }
 
-requestHandler::requestHandler(serverConfig const &conf) : _host(conf) {}
+requestHandler::requestHandler(serverConfig const &conf) : _host(conf), _contLen(0) {}
 
 requestHandler::requestHandler(void) {}
 
@@ -43,6 +43,7 @@ requestHandler::requestHandler(requestHandler const &copy)
 	_endBody = copy.getEndBody();
 	_tokens = copy.getTokens();
 	_request = copy.getReqData();
+	_contLen = copy.getContLen();
 }
 
 requestHandler &requestHandler::operator=(requestHandler const &copy)
@@ -52,6 +53,7 @@ requestHandler &requestHandler::operator=(requestHandler const &copy)
 	_endBody = copy.getEndBody();
 	_tokens = copy.getTokens();
 	_request = copy.getReqData();
+	_contLen = copy.getContLen();
 	return *this;
 }
 
@@ -63,12 +65,11 @@ void requestHandler::read(int const &fd)
 
 	while(true)
 	{
-		char buffer[BUFFER_SIZE];
-		readBytes = recv(fd, buffer, sizeof(buffer), 0);
+		char buffer[BUFFER_SIZE + 1];
+		readBytes = recv(fd, buffer, sizeof(buffer),0);
+		buffer[readBytes] = 0;
 		if (readBytes > 0)
-		{
-			_rawData.append(buffer, readBytes);
-		}
+			_rawData += buffer;
 		else if (readBytes == 0)
 			throw errorHandler("Client closed connection");
 		else
@@ -95,23 +96,12 @@ void requestHandler::read(int const &fd)
 
 void requestHandler::setBodyEnd(std::string token)
 {
-	std::stringstream ss(token);
-	std::string header;
-	std::string value;
-	if (std::getline(ss, header, ':') && std::getline(ss, value))
+	std::string find = "boundary=";
+	size_t found = token.find(find);
+	if (found != std::string::npos)
 	{
-		if (header == "Content-Type")
-		{
-			std::stringstream temp(value);
-			std::string tempVal;
-			while (std::getline(temp, tempVal, ';'))
-			{
-				std::string find = "boundary=";
-				size_t found = tempVal.find(find);
-				if (found != std::string::npos)
-					_endBody = tempVal.substr(found + find.size(), tempVal.size() - 1);
-			}
-		}
+		std::stringstream ss(token.substr(found + find.size(), token.size() - 1));
+		std::getline(ss, _endBody, ';');
 	}
 }
 
@@ -121,7 +111,7 @@ void requestHandler::tokenize(void)
 	std::string token;
 	while (std::getline(ss, token, '\n'))
 	{
-		if (token[token.size() - 1] == '\r')
+		if (token[token.size() - 1] == '\r' && token.size() > 1)
 			token = token.substr(0, token.size() - 1);
 		setBodyEnd(token);
 		if (!token.empty())
@@ -177,29 +167,48 @@ bool requestHandler::isBodyHeader(std::string &h, std::string &v, std::string co
 	return false;
 }
 
-t_reqBody requestHandler::fillReqBody(void)
+//Content-Disposition
+
+t_reqBody requestHandler::fillReqBody(bool upload)
 {
 	t_reqBody res;
+	std::string temp;
 	std::string token;
 
-	while (!_tokens.empty())
+	tokenize();
+	if (upload)
+	{
+		if (_tokens.top().find(_endBody) != std::string::npos)
+		{
+			_tokens.pop();
+			token = _tokens.top();
+			while (token.find(_endBody) != std::string::npos)
+			{
+				temp += token;
+				_tokens.pop();
+				token = _tokens.top();
+			}
+			if (token[0] != '-')
+				return res;
+			_tokens.pop();
+			while (_tokens.top().find("Content-Disposition:") != std::string::npos)
+				_tokens.pop();
+			if (!_tokens.empty())
+			{
+				getFileName(res, _tokens.top());
+				res.content = temp;
+			}
+		}
+	}
+	else if (!upload)
 	{
 		token = _tokens.top();
 		_tokens.pop();
-		if (token.find(_endBody) != std::string::npos)
-			break;
-		else
-		{
-			std::string h;
-			std::string v;
-			if (isBodyHeader(h, v, token))
-			{
-				if (h == "Content-Disposition")
-					getFileName(res, v);
-			}
-			else
-				res.content.insert(0, token);
-		}
+		if (token != "\r")
+			return res;
+		if (token.size() != _contLen)
+			return res;
+		res.content = token;
 	}
 	return res;
 }
@@ -220,13 +229,6 @@ void requestHandler::parse(void)
 		std::string headerVal;
 		if (std::getline(temp, headerProp, ':') && std::getline(temp, headerVal))
 			fillHeader(headerProp, headerVal);
-		else if(headerVal.empty() && !_tokens.empty())
-		{
-			t_reqBody reqBody = fillReqBody();
-			_request.body = reqBody;
-		}
-		else
-			fillMethodRoute(headerProp);
 	}
 }
 
@@ -254,10 +256,15 @@ void requestHandler::checkTimeout(int fd, double sec)
 
 bool requestHandler::requestComplete(void)
 {
-	std::stringstream ss(_rawData);
+	std::stringstream ss(_rawData.c_str());
 	std::string method;
+	std::string route;
 	std::string line;
 	std::getline(ss, method, ' ');
+	std::getline(ss, route, ' ');
+
+	_request.method = method;
+	parseRoute(route);
 	if (method == GET || method == HEAD || method == OPTIONS)
 	{
 		while (std::getline(ss, line, '\n'))
@@ -268,22 +275,18 @@ bool requestHandler::requestComplete(void)
 	}
 	else
 	{
-		int count = 0;
-		while (std::getline(ss, line, '\n'))
+		setBodyEnd(_rawData);
+		setContLen();
+		t_reqBody reqBd;
+		if (!_endBody.empty() && _contLen > 0)
+			reqBd =fillReqBody(true);
+		else if (_contLen > 0)
+			reqBd =fillReqBody(true);
+		if (!reqBd.empty())
 		{
-			if (_endBody.empty())
-				setBodyEnd(line);
-			else
-			{
-				if (line.find("boundary=") != std::string::npos)
-				{
-					if (line.find(_endBody) != std::string::npos)
-						count++;
-				}
-			}
-		}
-		if (count > 1)
+			_request.body = reqBd;
 			return true;
+		}
 	}
 	return false;
 }
@@ -356,3 +359,23 @@ std::ostream &operator<< (std::ostream &o, requestHandler const &req)
 	o << "body filename: " << req.getReqData().body.fileName << std::endl;
 	return o;
 }
+
+void requestHandler::setContLen()
+{
+	std::string contLen("Content-Length:");
+	size_t found = _rawData.find(contLen);
+
+	if (found != std::string::npos)
+	{
+		std::stringstream ss(_rawData.substr(found + contLen.size(), _rawData.size() - 1));
+		std::string contLen;
+		if (std::getline(ss, contLen, '\r'))
+		{
+			ss.clear();
+			ss << contLen;
+			ss >> _contLen;
+		}
+	}
+}
+
+int const requestHandler::getContLen(void) const {return _contLen;}

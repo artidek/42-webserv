@@ -129,7 +129,7 @@ void server::set()
 
 void server::readyEvents(int &nfds, struct epoll_event *events)
 {
-	nfds = epoll_wait(epollFd, events, MAX_EVENTS, 100); //wait for events and put them to events buffer
+	nfds = epoll_wait(epollFd, events, MAX_EVENTS, -1); //wait for events and put them to events buffer
 	if (nfds == - 1)
 		throw errorHandler(EVENTS_FAILED, std::string(strerror(errno)));
 }
@@ -175,19 +175,11 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		}
 		else
 		{
-			if (rH.getRawData().find("Content-Length:") != std::string::npos)
-			{
-				std::string response("HTTP/1.1 100 Continue\r\n\r\n");
-				responseHandler singleResp(rH.getConfig(), rH.getReqData());
-				singleResp.sendToClient(response.size(), response.c_str(), fd);
-				if (singleResp.responseComplete())
-					std::cout << "request not complete!!!!\n";
-			}
 			if (!isPendingReq(fd, rH))
 				pendingRequests[fd] = rH;
 		}
 		//std::cout << rH << std::endl;
-		std::cout << rH.getRawData();
+		std::cout << rH.getRawData().c_str() << std::endl;
 	}
 	catch(const std::exception& e)
 	{
@@ -217,6 +209,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	responseHandler resp(conf, req.getReqData());
 	try
 	{
+		std::cout << "anyway i got here\n";
 		resp.createResponce();
 		resp.sendResponse(fd);
 		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
