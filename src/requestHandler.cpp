@@ -90,8 +90,6 @@ void requestHandler::read(int const &fd)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (errno == EAGAIN || errno == EWOULDBLOCK)
-		std::cout << "socket drained succeffully \n";
 }
 
 void requestHandler::setBodyEnd(std::string token)
@@ -222,7 +220,6 @@ void requestHandler::parse(void)
 	while (!_tokens.empty())
 	{
 		token = _tokens.top();
-		std::cout << "token " << token << std::endl;
 		_tokens.pop();
 		std::stringstream temp(token);
 		std::string headerProp;
@@ -245,7 +242,6 @@ void requestHandler::checkTimeout(int fd, double sec)
 {
 	std::map<int, double>::iterator res = timeLog.find(fd);
 	int reqTimeout = _host.getHost().hostTimeout;
-	std::cout << "time diff " << sec - res->second << std::endl;
 	if (sec - res->second >= reqTimeout)
 	{
 		timeLog.erase(fd);
@@ -324,7 +320,6 @@ void requestHandler::parseRoute(std::string const &rawRoute)
 			tokens.push_back(token);
 	}
 	buildRoute(tokens);
-	std::cout << _request.route << " route\n";
 }
 
 void requestHandler::extractPathInfo(std::stringstream const &ss)
@@ -350,13 +345,14 @@ void requestHandler::buildRoute(std::vector<std::string> const &tokens)
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req)
 {
-	o << "method: " << req.getReqData().method << std::endl;
-	o << "route: " << req.getReqData().route << std::endl;
-	o << "query: " << req.getReqData().query << std::endl;
-	o << "page: " << req.getReqData().page << std::endl;
-	o << "path_info: " << req.getReqData().path_info<< std::endl;
-	o << "body content: " << req.getReqData().body.content << std::endl;
-	o << "body filename: " << req.getReqData().body.fileName << std::endl;
+	t_request reqData = req.getReqData();
+	o << "method: " << reqData.method << std::endl;
+	o << "route: " << reqData.route << std::endl;
+	o << "query: " << reqData.query << std::endl;
+	o << "page: " << reqData.page << std::endl;
+	o << "path_info: " << reqData.path_info<< std::endl;
+	o << "body content: " << reqData.body.content << std::endl;
+	o << "body filename: " << reqData.body.fileName << std::endl;
 	return o;
 }
 
@@ -378,4 +374,4 @@ void requestHandler::setContLen()
 	}
 }
 
-int const requestHandler::getContLen(void) const {return _contLen;}
+size_t requestHandler::getContLen(void) const {return _contLen;}

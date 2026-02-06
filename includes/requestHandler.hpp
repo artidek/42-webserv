@@ -39,7 +39,7 @@ class requestHandler
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
-		int _contLen;
+		size_t _contLen;
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
@@ -69,7 +69,7 @@ class requestHandler
 		std::stack<std::string> const getTokens(void) const;
 		void addToTimeLog(int fd, double sec);
 		void removeFromTimeLog(int const & fd);
-		int const getContLen() const;
+		size_t getContLen() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

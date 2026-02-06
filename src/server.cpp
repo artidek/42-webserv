@@ -177,9 +177,8 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		{
 			if (!isPendingReq(fd, rH))
 				pendingRequests[fd] = rH;
+			throw errorHandler("request incomplete");
 		}
-		//std::cout << rH << std::endl;
-		std::cout << rH.getRawData().c_str() << std::endl;
 	}
 	catch(const std::exception& e)
 	{
@@ -209,7 +208,6 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	responseHandler resp(conf, req.getReqData());
 	try
 	{
-		std::cout << "anyway i got here\n";
 		resp.createResponce();
 		resp.sendResponse(fd);
 		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
@@ -249,8 +247,7 @@ void server::handleClientData(int const &fd)
 		try
 		{
 			handleRequest(fd, res->second, req);
-			if (req.requestComplete())
-				handleResponse(fd, res->second, req);
+			handleResponse(fd, res->second, req);
 		}
 		catch(const std::exception& e)
 		{
