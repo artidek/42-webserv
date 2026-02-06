@@ -258,6 +258,12 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 			cgi.cgiAllowed = configUtils::onOff(prop);
 			count++;
 		}
+		else if (propName == "root")
+		{
+			configUtils::ifDir(prop);
+			cgi.root = prop;
+			count++;
+		}
 		else if (propName == "cgi_extensions")
 		{
 			configUtils::getFromList(cgi, blockTokens);
@@ -266,7 +272,7 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 		else
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
-	if (count < 2)
+	if (count < 3)
 		throw errorHandler(MISSING_PROPERTY, " cgi config");
 }
 
