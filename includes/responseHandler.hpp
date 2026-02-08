@@ -31,11 +31,14 @@ class responseHandler
 	private:
 		bool emptyBody;
 		bool sendComplete;
+		bool cgi;
+		std::string path;
 		std::string file;
 		std::map<std::string, void (responseHandler::*)(void)>runMethod;
 		serverConfig conf;
 		t_request const &request;
 	 	t_response resp;
+		t_route route;
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
 		void runGet();
@@ -49,8 +52,9 @@ class responseHandler
 		std::string eTag(std::string const &file);
 		void fillSendBuffer(std::string &buffer);
 		void validFile(t_route const &route);
-		bool isCgi(t_route const &route, std::string const &file);
-		void handleFile(t_route const &route, bool reqPage);
+		bool isCgi();
+		void fillHeaders(std::string connection, std::string contLen);
+		std::string getExt (std::string const &path);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

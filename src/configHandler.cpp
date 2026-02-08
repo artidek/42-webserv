@@ -252,7 +252,7 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 	{
 		if (!configUtils::getFromStack(propName, blockTokens)
 			|| !configUtils::getFromStack(prop, blockTokens))
-			throw errorHandler(MISSING_PROPERTY, "in route");
+			throw errorHandler(MISSING_PROPERTY, " cgi config");
 		if (propName == "cgi_allowed")
 		{
 			cgi.cgiAllowed = configUtils::onOff(prop);

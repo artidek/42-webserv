@@ -41,6 +41,7 @@ responseHandler::responseHandler(serverConfig const &config, t_request const &re
 	conf = config;
 	emptyBody = false;
 	sendComplete = false;
+	cgi = false;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -70,11 +71,11 @@ t_response const responseHandler::getResponceData(void) const
 void responseHandler::allowedMethod(std::string const &root)
 {
 	t_location loc = conf.getLocations()[root];
-	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), "GET");
+	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.method);
 	if (res == loc.methods.end())
 	{
 		resp.respCode = 405;
-		throw errorHandler("Method Not Allowed");
+		throw errorHandler(resp.respCodes[405]);
 	}
 }
 
@@ -87,7 +88,7 @@ void responseHandler::isRoute(t_route &route)
 	catch(const std::exception& e)
 	{
 		resp.respCode = 404;
-		throw errorHandler("Not Found");
+		throw errorHandler(resp.respCodes[404]);
 	}
 
 }
@@ -97,7 +98,7 @@ void responseHandler::fillResponseBody(std::string const & filePath)
 	std::fstream file(filePath.c_str());
 	if (file.fail()) {
     	resp.respCode = 500;
-    	throw errorHandler("Internal Server Error");
+    	throw errorHandler(resp.respCodes[500]);
 	}
 	std::stringstream ss;
 	if (resp.respCode != 204)
@@ -112,35 +113,26 @@ void responseHandler::fillResponseBody(std::string const & filePath)
 
 void responseHandler::runGet(void)
 {
-	t_route route;
-	std::string path;
+	std::stringstream ss;
 	try
 	{
-		isRoute(route);
-		allowedMethod(route.newRoot);
-		std::stringstream ss(route.response);
-		ss >> resp.respCode;
-		if (!request.page.empty())
-			handleFile(route, true);	
+		if (isCgi())
+		{
+			cgi = true;
+			//cgi handler goes here
+		}
 		else
 		{
-			if (route.page == "none")
+			if (access(path.c_str(), R_OK) == 0)
+				fillResponseBody(path);
+			else
 			{
 				resp.respCode = 403;
-				throw errorHandler("Forbiddden");
+				throw errorHandler(resp.respCodes[403]);
 			}
-			else
-				handleFile(route, false);
 		}
-		resp.headers["Server:"] = SRV;
-		resp.headers["Date:"] = configUtils::getDateTime();
-		ss.clear();
 		ss << resp.body.size();
-		resp.headers["Content-Length:"] = ss.str();
-		resp.headers["Connection:"] = "keep-alive";
-		resp.headers["ETag:"] = eTag(route.newRoot + route.page);
-		resp.headers["Accept-Ranges:"] = "bytes";
-
+		fillHeaders("keep-alive", ss.str());
 	}
 	catch(const std::exception& e)
 	{
@@ -151,45 +143,16 @@ void responseHandler::runGet(void)
 
 void responseHandler::runPost(void)
 {
-	t_route route;
-	std::string path;
 	try
 	{
-		isRoute(route);
-		allowedMethod(route.newRoot);
-		if (!request.page.empty())
+		if (isCgi())
 		{
-			path = configUtils::buildPath(route.newRoot, request.page);
-			if (isCgi(route, path))
-			{
-				//here must be cgi handler
-			}
-			else
-			{
-				resp.respCode = 400;
-				throw errorHandler ("Bad Request");
-			}
+			cgi = true;
+			//cgi handler goes here
 		}
 		else
 		{
-			if (route.page == "none")
-			{
-				resp.respCode = 403;
-				throw errorHandler("Forbiddden");
-			}
-			else
-			{
-				path = configUtils::buildPath(route.newRoot, route.page);
-				if (isCgi(route, path))
-				{
-					//here must be cgi handler
-				}
-				else
-				{
-					resp.respCode = 400;
-					throw errorHandler ("Bad Request");
-				}
-			}
+			//upload logic goes here
 		}
 	}
 	catch(const std::exception& e)
@@ -231,41 +194,14 @@ void responseHandler::runDelete(void)
 	std::string path;
 	try
 	{
-		isRoute(route);
-		allowedMethod(route.newRoot);
-		if (!request.page.empty())
+		if (isCgi())
 		{
-			path = configUtils::buildPath(route.newRoot, request.page);
-			if (isCgi(route, file))
-			{
-				//here must be cgi handler
-			}
-			else
-			{
-				resp.respCode = 400;
-				throw errorHandler ("Bad Request");
-			}
+			cgi = true;
+			//cgi handler goes here
 		}
 		else
 		{
-			if (route.page == "none")
-			{
-				resp.respCode = 403;
-				throw errorHandler("Forbiddden");
-			}
-			else
-			{
-				path = configUtils::buildPath(route.newRoot, route.page);
-				if (isCgi(route, path))
-				{
-					//here must be cgi handler
-				}
-				else
-				{
-					resp.respCode = 400;
-					throw errorHandler ("Bad Request");
-				}
-			}
+			//upload logic goes here
 		}
 	}
 	catch(const std::exception& e)
@@ -284,7 +220,7 @@ void responseHandler::isMethod(std::string &mtd)
 		if (m != GET && m != POST && m != DELETE && m != HEAD)
 		{
 			resp.respCode = 400;
-			throw errorHandler("Bad request");
+			throw errorHandler(resp.respCodes[400]);
 		}
 		else
 			mtd = m;
@@ -294,22 +230,40 @@ void responseHandler::isMethod(std::string &mtd)
 	else
 	{
 		resp.respCode = 400;
-		throw errorHandler("Bad request");
+		throw errorHandler(resp.respCodes[400]);
 	}
 }
 
 void responseHandler::createResponce(void)
 {
 	std::string method;
-	std::string loc;
 	try
 	{
 		isMethod(method);
+		isRoute(route);
+		allowedMethod(route.newRoot);
+		if (route.newRoot == "none" && request.page.empty())
+		{
+			resp.respCode = 500;
+			throw errorHandler(resp.respCodes[500]);
+		}
+		else
+		{
+			if (!request.page.empty())
+				path = configUtils::buildPath(route.newRoot, request.page);
+			else
+				path = configUtils::buildPath(route.newRoot,route.page);
+		}
+		std::stringstream ss(route.response);
+		ss >> resp.respCode;
 		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
 	{
-		throw errorHandler(std::string(e.what()));
+		std::string err(e.what());
+		if (err.find("No data available") != std::string::npos)
+			resp.respCode = 500;
+		throw errorHandler(std::string(err));
 	}
 
 }
@@ -353,7 +307,8 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 void responseHandler::sendResponse(int const &fd)
 {
 	std::string buffer;
-	fillSendBuffer(buffer);
+	if (!cgi)
+		fillSendBuffer(buffer);
 	try
 	{
 		sendToClient(buffer.size(), buffer.c_str(), fd);
@@ -387,26 +342,37 @@ int  responseHandler::getRespCode(void) const {return resp.respCode;}
 
 bool responseHandler::responseComplete(void) {return sendComplete;}
 
-bool responseHandler::isCgi(t_route const &route, std::string const &file)
+bool responseHandler::isCgi()
 {
 	try
 	{
 		t_cgi configs = conf.getCgiConf();
-		if (configs.cgiAllowed == true)
+		std::string ext = getExt(path);
+		std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
+		if (res != configs.extensions.end() && route.newRoot == configs.root)
 		{
-			t_location loc = conf.getLocation(route.newRoot);
-			std::stringstream ss(request.page);
-			std::string name;
-			std::string ext;
-			if (std::getline(ss, name, '.') && std::getline(ss, ext))
+			if (configs.cgiAllowed)
 			{
-				std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
-				if (res != configs.extensions.end())
+				if (access(path.c_str(), X_OK) == 0)
+					return true;
+				else
 				{
-					if (access(file.c_str(), X_OK) > 0)
-						return true;
+					resp.respCode = 403;
+					throw errorHandler(resp.respCodes[403]);
 				}
 			}
+			else
+			{
+				resp.respCode = 403;
+				throw errorHandler(resp.respCodes[403]);
+			}
+		}
+		else if (res == configs.extensions.end() && route.newRoot != configs.root)
+			return false;
+		else
+		{
+			resp.respCode = 500;
+			throw errorHandler(resp.respCodes[500]);
 		}
 	}
 	catch(const std::exception& e)
@@ -416,34 +382,22 @@ bool responseHandler::isCgi(t_route const &route, std::string const &file)
 	return false;
 }
 
-void responseHandler::handleFile(t_route const &route, bool reqPage)
+void responseHandler::fillHeaders(std::string connection, std::string contLen)
 {
-	try
-	{
-		if (reqPage)
-		{
-			std::string path = configUtils::buildPath(route.newRoot, request.page);
-			if (isCgi(route, path))
-			{
-				//cgi handler here
-			}
-			else
-				fillResponseBody(path);
-		}
-		else
-		{
-			std::string path = configUtils::buildPath(route.newRoot, route.page);
-			if (isCgi(route, path))
-			{
-				//cgi handler here
-			}
-			else
-				fillResponseBody(path);
-		}
-	}
-	catch(const std::exception& e)
-	{
-		throw errorHandler(std::string(e.what()));
-	}
-	
+	resp.headers["Server:"] = SRV;
+	resp.headers["Date:"] = configUtils::getDateTime();
+	resp.headers["Content-Length:"] = contLen;
+	resp.headers["Connection:"] = connection;
+	resp.headers["ETag:"] = eTag(route.newRoot + route.page);
+	resp.headers["Accept-Ranges:"] = "bytes";
+
+}
+
+std::string responseHandler::getExt(std::string const &path)
+{
+	std::string ext;
+	std::string::size_type fndPos = path.find('.');
+	if (fndPos != std::string::npos)
+		ext = path.substr(fndPos + 1);
+	return ext;
 }
