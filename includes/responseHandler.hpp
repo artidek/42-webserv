@@ -55,6 +55,7 @@ class responseHandler
 		bool isCgi();
 		void fillHeaders(std::string connection, std::string contLen);
 		std::string getExt (std::string const &path);
+		void getList();
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

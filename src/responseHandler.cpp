@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <dirent.h>
 
 s_response::s_response(void)
 {
@@ -116,7 +117,17 @@ void responseHandler::runGet(void)
 	std::stringstream ss;
 	try
 	{
-		if (isCgi())
+		if (path.substr(path.size() - 4) == "none")
+		{
+			if (conf.getLocation(route.newRoot).enableListing)
+				getList();
+			else
+			{
+				resp.respCode = 403;
+				throw errorHandler(resp.respCodes[403]);
+			}
+		}
+		else if (isCgi())
 		{
 			cgi = true;
 			//cgi handler goes here
@@ -400,4 +411,27 @@ std::string responseHandler::getExt(std::string const &path)
 	if (fndPos != std::string::npos)
 		ext = path.substr(fndPos + 1);
 	return ext;
+}
+
+void responseHandler::getList()
+{
+	std::stringstream ss;
+
+	ss << "<!DOCTYPE html>\n";
+	ss << "<html><head><title>Index of " << request.route << " </title></head><body>\n";
+	ss << "<h1>Index of " << request.route << "</h1>\n";
+	ss << "<ul>\n";
+	DIR *dir = opendir(route.newRoot.c_str());
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		std::string name(entry->d_name);
+		if (name == ".." || name == ".")
+			continue;
+		ss << "<li><a href=" << request.route << "/" << name << ">" << name << "</a></li>\n";
+	}
+	ss << "</ul>\n";
+	ss << "</body></html>\n";
+	resp.body = ss.str();
+	closedir(dir);
 }
