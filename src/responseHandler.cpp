@@ -410,6 +410,8 @@ std::string responseHandler::getExt(std::string const &path)
 	std::string::size_type fndPos = path.find('.');
 	if (fndPos != std::string::npos)
 		ext = path.substr(fndPos + 1);
+	else
+		return "none";
 	return ext;
 }
 

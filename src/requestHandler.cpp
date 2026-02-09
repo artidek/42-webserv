@@ -70,8 +70,8 @@ void requestHandler::read(int const &fd)
 		buffer[readBytes] = 0;
 		if (readBytes > 0)
 			_rawData += buffer;
-		else if (readBytes == 0)
-			throw errorHandler("Client closed connection");
+		// else if (readBytes == 0)
+		// 	throw errorHandler("Client closed connection");
 		else
 		{
 			if (errno == EINTR)
@@ -95,11 +95,12 @@ void requestHandler::read(int const &fd)
 void requestHandler::setBodyEnd(std::string token)
 {
 	std::string find = "boundary=";
-	size_t found = token.find(find);
+	std::string::size_type found = token.find(find);
 	if (found != std::string::npos)
 	{
 		std::stringstream ss(token.substr(found + find.size(), token.size() - 1));
 		std::getline(ss, _endBody, ';');
+		std::cout << "body end " << _endBody << std::endl;
 	}
 }
 
@@ -111,7 +112,6 @@ void requestHandler::tokenize(void)
 	{
 		if (token[token.size() - 1] == '\r' && token.size() > 1)
 			token = token.substr(0, token.size() - 1);
-		setBodyEnd(token);
 		if (!token.empty())
 			_tokens.push(token);
 	}
@@ -358,18 +358,20 @@ std::ostream &operator<< (std::ostream &o, requestHandler const &req)
 
 void requestHandler::setContLen()
 {
-	std::string contLen("Content-Length:");
-	size_t found = _rawData.find(contLen);
+	std::string contLenHead("Content-Length:");
+	std::string::size_type found = _rawData.find(contLenHead);
 
 	if (found != std::string::npos)
 	{
-		std::stringstream ss(_rawData.substr(found + contLen.size(), _rawData.size() - 1));
+		std::stringstream ss(_rawData.substr(found + contLenHead.size()));
 		std::string contLen;
-		if (std::getline(ss, contLen, '\r'))
+		if (std::getline(ss, contLen, '\n'))
 		{
-			ss.clear();
-			ss << contLen;
-			ss >> _contLen;
+			std::stringstream toInt(contLen);
+			toInt << contLen;
+			std::cout << "cont len header content " << contLen << std::endl;
+			toInt >> _contLen;
+			std::cout << "content length is " << _contLen << std::endl;
 		}
 	}
 }

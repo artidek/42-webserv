@@ -172,6 +172,8 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 				pendingRequests.erase(fd);
 			rH.removeFromTimeLog(fd);
 			rH.parse();
+			std::cout << rH.getRawData() << std::endl;
+			std::cout << rH << std::endl;
 		}
 		else
 		{
