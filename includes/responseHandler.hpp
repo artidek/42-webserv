@@ -56,6 +56,7 @@ class responseHandler
 		void fillHeaders(std::string connection, std::string contLen);
 		std::string getExt (std::string const &path);
 		void getList();
+		void uniqueName(std::string &flName);
 	public:
 		responseHandler(serverConfig const &config, t_request const &req);
 		~responseHandler(void);

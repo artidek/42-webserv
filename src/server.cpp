@@ -168,12 +168,14 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		rH.read(fd);
 		if (rH.requestComplete())
 		{
+			std::cout << "filename " << rH.getReqData().body.fileName << std::endl;
+			std::cout << "body content " << rH.getReqData().body.content << std::endl;
 			if (isPendingReq(fd, rH))
 				pendingRequests.erase(fd);
 			rH.removeFromTimeLog(fd);
 			rH.parse();
-			std::cout << rH.getRawData() << std::endl;
-			std::cout << rH << std::endl;
+			//std::cout << rH.getRawData() << std::endl;
+			//std::cout << rH << std::endl;
 		}
 		else
 		{

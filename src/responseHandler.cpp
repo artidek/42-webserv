@@ -156,14 +156,34 @@ void responseHandler::runPost(void)
 {
 	try
 	{
+		if (path.substr(path.size() - 4) == "none")
+		{
+			if (conf.getLocation(route.newRoot).enableUpload)
+			{
+				std::string filename = request.body.fileName;
+				filename = configUtils::trim(filename, "\"");
+				uniqueName(filename);
+				std::string path = route.newRoot;
+				if (path[path.size() - 1] != '/')
+				{
+					path.resize(path.size() + 1);
+					path += '/';
+				}
+				path += filename;
+				std::fstream file(path.c_str(), std::ios::out);
+				file << request.body.content;
+				fillResponseBody("etc/error/success.html");
+			}
+			else
+			{
+				resp.respCode = 403;
+				throw errorHandler(resp.respCodes[403]);
+			}
+		}
 		if (isCgi())
 		{
 			cgi = true;
 			//cgi handler goes here
-		}
-		else
-		{
-			//upload logic goes here
 		}
 	}
 	catch(const std::exception& e)
@@ -436,4 +456,32 @@ void responseHandler::getList()
 	ss << "</body></html>\n";
 	resp.body = ss.str();
 	closedir(dir);
+}
+
+void responseHandler::uniqueName(std::string &flName)
+{
+	struct stat st;
+	std::string path = route.newRoot;
+	if (path[path.size() - 1] != '/')
+		path += "/";
+	std::string temp = path += flName;
+	while (stat(temp.c_str(), &st) == 0)
+	{
+		size_t found = flName.find(".");
+		if (found != std::string::npos)
+		{
+			std::string nwName = path.substr(0, found);
+			std::string ext = getExt(flName);
+			nwName + "_1" + "." + ext;
+			temp.clear();
+			temp = path + nwName;
+			flName.clear();
+			flName = nwName;
+		}
+		else
+		{
+			temp += "_1";
+			flName += "_1";
+		}
+	}
 }

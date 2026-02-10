@@ -43,7 +43,7 @@ class requestHandler
 		static std::map<std::string, std::string> initHeaders(void);
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
-		t_reqBody fillReqBody(bool upload);
+		void fillReqBody();
 		void fillMethodRoute(std::string headerProp);
 		void getFileName(t_reqBody &reqBody, std::string value);
 		void setBodyEnd(std::string token);
@@ -53,6 +53,7 @@ class requestHandler
 		void parseRoute(std::string const &rawRoute);
 		void extractPathInfo(std::stringstream const &ss);
 		void buildRoute(std::vector<std::string> const &tokens);
+		void fillReqBodyApp();
 	public:
 		requestHandler(void);
 		requestHandler(serverConfig const &copy);
