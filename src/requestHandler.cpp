@@ -1,5 +1,6 @@
 #include "../includes/configUtils.hpp"
 #include "../includes/requestHandler.hpp"
+#include "../includes/responseHandler.hpp"
 #include <sys/socket.h>
 #include <errno.h>
 #include <iostream>
@@ -67,9 +68,9 @@ void requestHandler::read(int const &fd)
 	{
 		char buffer[BUFFER_SIZE + 1];
 		readBytes = recv(fd, buffer, sizeof(buffer),0);
-		buffer[readBytes] = 0;
+		//buffer[readBytes] = 0;
 		if (readBytes > 0)
-			_rawData += buffer;
+			_rawData.append(buffer, readBytes);
 		// else if (readBytes == 0)
 		// 	throw errorHandler("Client closed connection");
 		else
@@ -162,42 +163,43 @@ bool requestHandler::isBodyHeader(std::string &h, std::string &v, std::string co
 
 void requestHandler::fillReqBody()
 {
-		std::string startBoundary = "--" + _endBody;
-		std::string endBoundary = "--" + _endBody + "--";
-		size_t startPos = _rawData.find(startBoundary);
-		if (startPos == std::string::npos)
-			throw errorHandler("Invalid request");
-		std::stringstream ss(_rawData.substr(startPos + startBoundary.size() + 2));
-		std::string token;
-		std::getline(ss, token, '\n');
-		while (!token.empty())
-		{
-			if (token == "\r")
-				break;
-			std::string header, prop;
-			if (!token.empty() && isBodyHeader(header, prop, token))
-				getFileName(_request.body, prop);
-			std::getline(ss, token);
-		}
-		std::string restOfReq = ss.str().substr(ss.tellg());
-		size_t stopPos = restOfReq.find(endBoundary);
-		if (stopPos == std::string::npos)
-			throw errorHandler("Invalid request");	
-		_request.body.content = restOfReq.substr(0, stopPos);
+	std::string startBoundary = "--" + _endBody;
+	std::string endBoundary = "--" + _endBody + "--";
+	size_t startPos = _rawData.find(startBoundary);
+	if (startPos == std::string::npos)
+		throw errorHandler("No starting boundary");
+	std::string dataAfterBoundary = _rawData.substr(startPos + startBoundary.size());
+    std::stringstream ss(dataAfterBoundary);
+	std::string token;
+	std::getline(ss, token, '\n');
+	// Skip initial \r\n after boundary
+    if (ss.peek() == '\r') ss.get();
+    if (ss.peek() == '\n') ss.get();
+	//Skip headers and extract filename
+	 while (std::getline(ss, token) && !token.empty() && token != "\r")
+    {
+        std::string header, prop;
+        if (isBodyHeader(header, prop, token))
+            getFileName(_request.body, prop);
+    }
+	//Read the rest of the body including end boundary
+	std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
+	size_t stopPos = restOfReq.find(endBoundary);
+	if (stopPos == std::string::npos)
+		throw errorHandler("No ending boundary");
+	//Extract body content	
+	_request.body.content = restOfReq.substr(0, stopPos);
 }
 
 void requestHandler::fillReqBodyApp()
 {
 	std::stringstream ss(_rawData);
 	std::string token;
-	std::getline(ss, token);
-	while (!token.empty())
-	{
-		if (token == "\r")
-			break;
-		std::getline(ss, token);
-	}
-	_request.body.content = ss.str().substr(ss.tellg());
+	while (std::getline(ss, token) && !token.empty() && token != "\r") {}
+	 std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
+	 if (restOfReq.size() < _contLen)
+	 	throw errorHandler("Not fully read");
+	_request.body.content = restOfReq;
 	_request.body.fileName = "uploadded_file";
 }
 
@@ -263,12 +265,20 @@ bool requestHandler::requestComplete(void)
 	{
 		setBodyEnd(_rawData);
 		setContLen();
-		if (!_endBody.empty() && _contLen > 0)
-			fillReqBody();
-		else if (_contLen > 0)
-			fillReqBodyApp();
-		if (!_request.body.empty())
-			return true;
+		try
+		{
+			if (!_endBody.empty() && doneReading())
+				fillReqBody();
+			else if (doneReading())
+				fillReqBodyApp();
+			if (!_request.body.empty())
+				return true;
+		}
+		catch(const std::exception& e)
+		{
+			std::cout << e.what() << " it comes from request complete\n" << std::endl;
+			return false;
+		}
 	}
 	return false;
 }
@@ -361,3 +371,14 @@ void requestHandler::setContLen()
 }
 
 size_t requestHandler::getContLen(void) const {return _contLen;}
+
+bool requestHandler::doneReading()
+{
+	std::stringstream ss(_rawData);
+	std::string token;
+	while (std::getline(ss, token) && !token.empty() && token != "\r") {}
+	 std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
+	if (restOfReq.size() == _contLen)
+		return true;
+	return false;
+}

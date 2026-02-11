@@ -1,5 +1,5 @@
-#include "../includes/responseHandler.hpp"
 #include "../includes/requestHandler.hpp"
+#include "../includes/responseHandler.hpp"
 #include "../includes/configUtils.hpp"
 #include <iostream>
 #include <algorithm>
@@ -33,7 +33,7 @@ s_response::s_response(void)
 	respCodes[503] = "Service Unavailable";
 }
 
-responseHandler::responseHandler(serverConfig const &config, t_request const &req) : request(req) {
+responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) {
 
 	runMethod[GET] = &responseHandler::runGet;
 	runMethod[POST] = &responseHandler::runPost;
@@ -43,6 +43,7 @@ responseHandler::responseHandler(serverConfig const &config, t_request const &re
 	emptyBody = false;
 	sendComplete = false;
 	cgi = false;
+	request = req;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -72,7 +73,7 @@ t_response const responseHandler::getResponceData(void) const
 void responseHandler::allowedMethod(std::string const &root)
 {
 	t_location loc = conf.getLocations()[root];
-	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.method);
+	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.getReqData().method);
 	if (res == loc.methods.end())
 	{
 		resp.respCode = 405;
@@ -84,7 +85,7 @@ void responseHandler::isRoute(t_route &route)
 {
 	try
 	{
-		route = conf.getRoute(request.route);
+		route = conf.getRoute(request.getReqData().route);
 	}
 	catch(const std::exception& e)
 	{
@@ -160,18 +161,17 @@ void responseHandler::runPost(void)
 		{
 			if (conf.getLocation(route.newRoot).enableUpload)
 			{
-				std::string filename = request.body.fileName;
+				std::string filename = request.getReqData().body.fileName;
+				std::cout << "filename " << request.getReqData().body.fileName << std::endl;
 				filename = configUtils::trim(filename, "\"");
 				uniqueName(filename);
 				std::string path = route.newRoot;
 				if (path[path.size() - 1] != '/')
-				{
-					path.resize(path.size() + 1);
 					path += '/';
-				}
 				path += filename;
-				std::fstream file(path.c_str(), std::ios::out);
-				file << request.body.content;
+				std::fstream file(path.c_str(), std::ios::out | std::ios::binary);
+				file.write(request.getReqData().body.content.c_str(), request.getReqData().body.content.size());
+				file.close();
 				fillResponseBody("etc/error/success.html");
 			}
 			else
@@ -243,10 +243,10 @@ void responseHandler::runDelete(void)
 
 void responseHandler::isMethod(std::string &mtd)
 {
-	std::string m = request.method;
+	std::string m = request.getReqData().method;
 	if (m == OPTIONS)
 	{
-		std::map<std::string, std::string> headers = request.headers;
+		std::map<std::string, std::string> headers = request.getReqData().headers;
 		m = headers["Access-Control-Request-Method"];
 		if (m != GET && m != POST && m != DELETE && m != HEAD)
 		{
@@ -273,15 +273,15 @@ void responseHandler::createResponce(void)
 		isMethod(method);
 		isRoute(route);
 		allowedMethod(route.newRoot);
-		if (route.newRoot == "none" && request.page.empty())
+		if (route.newRoot == "none" && request.getReqData().page.empty())
 		{
 			resp.respCode = 500;
 			throw errorHandler(resp.respCodes[500]);
 		}
 		else
 		{
-			if (!request.page.empty())
-				path = configUtils::buildPath(route.newRoot, request.page);
+			if (!request.getReqData().page.empty())
+				path = configUtils::buildPath(route.newRoot, request.getReqData().page);
 			else
 				path = configUtils::buildPath(route.newRoot,route.page);
 		}
@@ -319,7 +319,7 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 	while (total < size)
 	{
 		int writeBytes = send(fd, buff + total, size - total, 0);
-		if (writeBytes < 0)
+		if (writeBytes <= 0)
 		{
 			if (errno == EINTR) continue;
 			else if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -327,8 +327,8 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 			else
 				throw errorHandler("Send failed");
 		}
-		if (writeBytes == 0)
-			throw errorHandler("Peer closed");
+		// if (writeBytes == 0)
+		// 	throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
 	if (std::string(buff).size() == total)
@@ -440,8 +440,8 @@ void responseHandler::getList()
 	std::stringstream ss;
 
 	ss << "<!DOCTYPE html>\n";
-	ss << "<html><head><title>Index of " << request.route << " </title></head><body>\n";
-	ss << "<h1>Index of " << request.route << "</h1>\n";
+	ss << "<html><head><title>Index of " << request.getReqData().route << " </title></head><body>\n";
+	ss << "<h1>Index of " << request.getReqData().route << "</h1>\n";
 	ss << "<ul>\n";
 	DIR *dir = opendir(route.newRoot.c_str());
 	struct dirent *entry;
@@ -450,7 +450,7 @@ void responseHandler::getList()
 		std::string name(entry->d_name);
 		if (name == ".." || name == ".")
 			continue;
-		ss << "<li><a href=" << request.route << "/" << name << ">" << name << "</a></li>\n";
+		ss << "<li><a href=" << request.getReqData().route << "/" << name << ">" << name << "</a></li>\n";
 	}
 	ss << "</ul>\n";
 	ss << "</body></html>\n";
@@ -461,18 +461,22 @@ void responseHandler::getList()
 void responseHandler::uniqueName(std::string &flName)
 {
 	struct stat st;
+	int count = 0;
 	std::string path = route.newRoot;
 	if (path[path.size() - 1] != '/')
 		path += "/";
-	std::string temp = path += flName;
+	std::string temp = path + flName;
 	while (stat(temp.c_str(), &st) == 0)
 	{
-		size_t found = flName.find(".");
+		count++;
+		std::stringstream ss;
+		ss << count;
+		size_t found = flName.rfind(".");
 		if (found != std::string::npos)
 		{
-			std::string nwName = path.substr(0, found);
+			std::string nwName = flName.substr(0, found);
 			std::string ext = getExt(flName);
-			nwName + "_1" + "." + ext;
+			nwName += "_" + ss.str() + "." + ext;
 			temp.clear();
 			temp = path + nwName;
 			flName.clear();
@@ -480,8 +484,8 @@ void responseHandler::uniqueName(std::string &flName)
 		}
 		else
 		{
-			temp += "_1";
-			flName += "_1";
+			temp += "_" + ss.str();
+			flName += "_" + ss.str();
 		}
 	}
 }

@@ -15,6 +15,8 @@
 #define ACPT_RNG "Accept-Ranges:"
 #define LOC "Location:"
 
+class requestHandler;
+
 typedef struct s_response
 {
 	int respCode;
@@ -23,8 +25,6 @@ typedef struct s_response
 	std::string body;
 	s_response(void);
 } t_response;
-
-typedef struct s_request t_request;
 
 class responseHandler
 {
@@ -36,7 +36,7 @@ class responseHandler
 		std::string file;
 		std::map<std::string, void (responseHandler::*)(void)>runMethod;
 		serverConfig conf;
-		t_request const &request;
+		requestHandler request;
 	 	t_response resp;
 		t_route route;
 		responseHandler(responseHandler const &copy);
@@ -58,7 +58,7 @@ class responseHandler
 		void getList();
 		void uniqueName(std::string &flName);
 	public:
-		responseHandler(serverConfig const &config, t_request const &req);
+		responseHandler(serverConfig const &config, requestHandler const &req);
 		~responseHandler(void);
 		void createResponce(void);
 		void sendResponse(int const &fd);

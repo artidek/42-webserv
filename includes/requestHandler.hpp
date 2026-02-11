@@ -4,13 +4,13 @@
 #define REQUEST_HANDLER_H
 
 #include "serverConfig.hpp"
-#include "responseHandler.hpp"
 #include <stack>
 #include <ctime>
 
 
 #define BUFFER_SIZE  8192
 
+class responseHandler;
 typedef struct s_reqBody
 {
 	std::string fileName;
@@ -54,6 +54,7 @@ class requestHandler
 		void extractPathInfo(std::stringstream const &ss);
 		void buildRoute(std::vector<std::string> const &tokens);
 		void fillReqBodyApp();
+		bool doneReading();
 	public:
 		requestHandler(void);
 		requestHandler(serverConfig const &copy);

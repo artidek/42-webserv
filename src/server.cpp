@@ -163,15 +163,9 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			rH = requestHandler(conf);
 			rH.addToTimeLog(fd, configUtils::getTime());
 		}
-		else
-			rH = pendingRequests[fd];
 		rH.read(fd);
 		if (rH.requestComplete())
 		{
-			std::cout << "filename " << rH.getReqData().body.fileName << std::endl;
-			std::cout << "body content " << rH.getReqData().body.content << std::endl;
-			if (isPendingReq(fd, rH))
-				pendingRequests.erase(fd);
 			rH.removeFromTimeLog(fd);
 			rH.parse();
 			//std::cout << rH.getRawData() << std::endl;
@@ -187,29 +181,31 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
-		if (err != "Reading error" || err != "Client closed connection")
+		//bad request should be handled with 408 response and closing connection
+		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
 		{
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
-			responseHandler badResp(rH.getConfig(), rH.getReqData());
+			responseHandler badResp(rH.getConfig(), rH);
 			badResp.sendBad(408, fd);
 			if (badResp.responseComplete())
 			{
 				epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 				close(fd);
+				fdToHost.erase(fd);
 			}
 		}
-		else
-			close(fd);
-		fdToHost.erase(fd);
-		std::cerr << err << '\n';
+		// else
+		// 	close(fd);
+		// fdToHost.erase(fd);
+		// std::cerr << err << '\n';
 		throw errorHandler(std::string(e.what()));
 	}
 }
 
 void server::handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req)
 {
-	responseHandler resp(conf, req.getReqData());
+	responseHandler resp(conf, req);
 	try
 	{
 		resp.createResponce();
@@ -230,12 +226,11 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 		if (err != "Send failed" || err != "Peer closed")
 		{
 			resp.sendBad(resp.getRespCode(), fd);
-			std::cout << "error " << resp.getRespCode() << std::endl;
 		}
-		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-		close(fd);
-		fdToHost.erase(fd);
-		std::cerr << err << '\n';
+		// epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+		// close(fd);
+		// fdToHost.erase(fd);
+		// std::cerr << err << '\n';
 		throw errorHandler(std::string(e.what()));
 	}
 
@@ -251,11 +246,15 @@ void server::handleClientData(int const &fd)
 		try
 		{
 			handleRequest(fd, res->second, req);
+			std::cout << "yob tvoyu mat " << req.getReqData().body.fileName << std::endl;
 			handleResponse(fd, res->second, req);
+			if (isPendingReq(fd, req))
+				pendingRequests.erase(fd);
+			
 		}
 		catch(const std::exception& e)
 		{
-			std::cout << e.what() << std::endl;
+			std::cout << e.what() << " it comes from client\n" << std::endl;
 			// close(fd);
 			// fdToHost.erase(fd);
 		}
