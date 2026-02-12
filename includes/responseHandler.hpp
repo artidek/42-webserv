@@ -36,7 +36,7 @@ class responseHandler
 		std::string file;
 		std::map<std::string, void (responseHandler::*)(void)>runMethod;
 		serverConfig conf;
-		requestHandler request;
+		requestHandler const &request;
 	 	t_response resp;
 		t_route route;
 		responseHandler(responseHandler const &copy);
@@ -67,6 +67,7 @@ class responseHandler
 		void sendBad(int const &respCode, int const &fd);
 		int  getRespCode() const;
 		bool responseComplete(void);
+		int findRespCode(std::string const &err);
 };
 
 #endif

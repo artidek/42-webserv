@@ -1,5 +1,6 @@
 #include "../includes/errorHandler.hpp"
 #include "../includes/server.hpp"
+#include "../includes/configUtils.hpp"
 #include <errno.h>
 #include <iostream>
 #include <string.h>
@@ -145,12 +146,11 @@ bool server::listenSocket(int const &fd, serverConfig &conf)
 	return true;
 }
 
-bool server::isPendingReq(int const &fd, requestHandler &req)
+bool server::isPendingReq(int const &fd)
 {
 	std::map<int, requestHandler>::iterator res = pendingRequests.find(fd);
 	if (res == pendingRequests.end())
 		return false;
-	req = res->second;
 	return true;
 }
 
@@ -158,22 +158,23 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 {
 	try
 	{
-		if (!isPendingReq(fd, rH))
+		if (!isPendingReq(fd))
 		{
 			rH = requestHandler(conf);
 			rH.addToTimeLog(fd, configUtils::getTime());
 		}
+		else
+			rH = pendingRequests[fd];
 		rH.read(fd);
+		rH.checkTimeout(fd, configUtils::getTime());
 		if (rH.requestComplete())
 		{
 			rH.removeFromTimeLog(fd);
 			rH.parse();
-			//std::cout << rH.getRawData() << std::endl;
-			//std::cout << rH << std::endl;
 		}
 		else
 		{
-			if (!isPendingReq(fd, rH))
+			if (!isPendingReq(fd))
 				pendingRequests[fd] = rH;
 			throw errorHandler("request incomplete");
 		}
@@ -181,24 +182,21 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
-		//bad request should be handled with 408 response and closing connection
+		//bad request should be handled with err response and closing connection
 		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
 		{
+			std::cout << "here we have " << err << std::endl;
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
 			responseHandler badResp(rH.getConfig(), rH);
-			badResp.sendBad(408, fd);
+			int rc = badResp.findRespCode(err);
+			if (rc > 0)
+				badResp.sendBad(rc, fd);
+			else
+				badResp.sendBad(400, fd);
 			if (badResp.responseComplete())
-			{
-				epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-				close(fd);
-				fdToHost.erase(fd);
-			}
+				closeConSock(fd);
 		}
-		// else
-		// 	close(fd);
-		// fdToHost.erase(fd);
-		// std::cerr << err << '\n';
 		throw errorHandler(std::string(e.what()));
 	}
 }
@@ -210,15 +208,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	{
 		resp.createResponce();
 		resp.sendResponse(fd);
-		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-		close(fd);
-		fdToHost.erase(fd);
-		// t_response response = resp.getResponceData();
-		// std::cout << "respnose code " << response.respCode << std::endl;
-		// std::map<std::string, std::string>::iterator it = response.headers.begin();
-		// for(; it != response.headers.end(); ++it)
-		// 	std::cout << it->first << " " << it->second << std::endl;
-		// std::cout << "body: " << response.body;
+		closeConSock(fd);
 	}
 	catch(const std::exception& e)
 	{
@@ -226,14 +216,9 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 		if (err != "Send failed" || err != "Peer closed")
 		{
 			resp.sendBad(resp.getRespCode(), fd);
+			closeConSock(fd);
 		}
-		// epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-		// close(fd);
-		// fdToHost.erase(fd);
-		// std::cerr << err << '\n';
-		throw errorHandler(std::string(e.what()));
 	}
-
 }
 
 void server::handleClientData(int const &fd)
@@ -246,11 +231,10 @@ void server::handleClientData(int const &fd)
 		try
 		{
 			handleRequest(fd, res->second, req);
-			std::cout << "yob tvoyu mat " << req.getReqData().body.fileName << std::endl;
-			handleResponse(fd, res->second, req);
-			if (isPendingReq(fd, req))
+			if (isPendingReq(fd))
 				pendingRequests.erase(fd);
-			
+			std::cout << "request complete name is " << req.getReqData().body.fileName << " route is " << req.getReqData().route << std::endl;
+			handleResponse(fd, res->second, req);
 		}
 		catch(const std::exception& e)
 		{
@@ -279,7 +263,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
                 if (conn_socket == -1) break;
 				setNonBlocking(conn_socket); //sets connection socket nonblocking
 				struct epoll_event ev_client;
-            	ev_client.events = EPOLLIN | EPOLLET;  // edge-triggered read
+            	ev_client.events = EPOLLIN | EPOLLET;  
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);
@@ -313,4 +297,11 @@ void server::run()
 			throw errorHandler(err);
 		}
 	}
+}
+
+void server::closeConSock(int const &fd)
+{
+	epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+	close(fd);
+	fdToHost.erase(fd);
 }

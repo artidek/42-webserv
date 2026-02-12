@@ -187,12 +187,11 @@ void configUtils::ifPage(std::string const &path, std::string const &page)
 std::string configUtils::trim (std::string const &src, std::string const &set)
 {
 	std::string res = src;
-	for (int i = 0; set[i]; i++)
-	{
-		size_t first = res.find_first_not_of(set[i]);
-		size_t last = res.find_last_not_of(set[i]);
-		res = res.substr(first, last);
-	}
+	size_t first = res.find_first_not_of(set);
+	if (first == std::string::npos)
+		return "";
+	size_t last = res.find_last_not_of(set);
+	res = res.substr(first, last - first + 1);
 	return res;
 }
 
@@ -229,15 +228,17 @@ std::string configUtils::getDateTime(void)
 double configUtils::getTime(void)
 {
 	std::time_t timer;
-  	struct tm y2k;
-  	double seconds;
+    std::tm y2k;
 
-	std::memset(&y2k, 0, sizeof(y2k));
-  	y2k.tm_hour = 0;   y2k.tm_min = 0; y2k.tm_sec = 0;
-  	y2k.tm_year = 100; y2k.tm_mon = 0; y2k.tm_mday = 1;
-  	std::time(&timer);
-  	seconds = std::difftime(timer,mktime(&y2k));
-	return seconds;
+    std::memset(&y2k, 0, sizeof(y2k));
+
+    y2k.tm_year = 100;   // 2000
+    y2k.tm_mon  = 0;     // Jan
+    y2k.tm_mday = 1;
+    y2k.tm_isdst = -1;   // <-- critical
+
+    std::time(&timer);
+    return std::difftime(timer, std::mktime(&y2k));
 }
 
 std::string configUtils::buildPath(std::string const &path, std::string const &name)

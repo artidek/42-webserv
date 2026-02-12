@@ -49,7 +49,6 @@ class requestHandler
 		void setBodyEnd(std::string token);
 		void setContLen(void);
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
-		void checkTimeout(int fd, double sec);
 		void parseRoute(std::string const &rawRoute);
 		void extractPathInfo(std::stringstream const &ss);
 		void buildRoute(std::vector<std::string> const &tokens);
@@ -72,6 +71,7 @@ class requestHandler
 		void addToTimeLog(int fd, double sec);
 		void removeFromTimeLog(int const & fd);
 		size_t getContLen() const;
+		void checkTimeout(int fd, double sec);
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

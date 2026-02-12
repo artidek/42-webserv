@@ -37,9 +37,10 @@ class server
 		void proceedEvents(int const &nfds, struct epoll_event *events);
 		bool listenSocket(int const &fd, serverConfig &conf);
 		void handleClientData(int const &fd);
-		bool isPendingReq(int const &fd, requestHandler &req);
+		bool isPendingReq(int const &fd);
 		void handleRequest(int const &fd, serverConfig const &conf, requestHandler &rH);
 		void handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req);
+		void closeConSock(int const &fd);
 	public:
 		server(std::vector<serverConfig> const &conf);
 		~server(void);

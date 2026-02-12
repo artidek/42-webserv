@@ -33,7 +33,7 @@ s_response::s_response(void)
 	respCodes[503] = "Service Unavailable";
 }
 
-responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) {
+responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) : request(req) {
 
 	runMethod[GET] = &responseHandler::runGet;
 	runMethod[POST] = &responseHandler::runPost;
@@ -43,7 +43,6 @@ responseHandler::responseHandler(serverConfig const &config, requestHandler cons
 	emptyBody = false;
 	sendComplete = false;
 	cgi = false;
-	request = req;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -331,7 +330,7 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 		// 	throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
-	if (std::string(buff).size() == total)
+	if (size == total)
 		sendComplete = true;
 }
 
@@ -366,6 +365,7 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 		resp.headers["Content-Length:"] = "0";
 	std::string buff;
 	fillSendBuffer(buff);
+	std::cout << "sending bad\n";
 	sendToClient(buff.size(), buff.c_str(), fd);
 }
 
@@ -488,4 +488,16 @@ void responseHandler::uniqueName(std::string &flName)
 			flName += "_" + ss.str();
 		}
 	}
+}
+
+int responseHandler::findRespCode(std::string const &err)
+{
+	std::map<int, std::string>::iterator begin = resp.respCodes.begin();
+	std::map<int, std::string>::iterator end = resp.respCodes.end();
+	for (; begin != end; ++begin)
+	{
+		if (begin->second == err)
+			return begin->first;
+	}
+	return 0;
 }

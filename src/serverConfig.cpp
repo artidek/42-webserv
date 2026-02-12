@@ -49,9 +49,11 @@ serverConfig::serverConfig(void) {
 	errorPages[402] = "etc/error/402.html";
 	errorPages[403] = "etc/error/403.html";
 	errorPages[404] = "etc/error/404.html";
+	errorPages[405] = "etc/error/405.html";
+	errorPages[408] = "etc/error/408.html";
 	errorPages[500] = "etc/error/500.html";
 	errorPages[501] = "etc/error/501.html";
-	errorPages[502] = "etc/error/501.html";
+	errorPages[502] = "etc/error/502.html";
 	cgiConf.cgiAllowed = "off";
 	cgiConf.extensions.push_back("php");
 	cgiConf.extensions.push_back("py");

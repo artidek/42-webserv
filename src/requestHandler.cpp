@@ -71,8 +71,8 @@ void requestHandler::read(int const &fd)
 		//buffer[readBytes] = 0;
 		if (readBytes > 0)
 			_rawData.append(buffer, readBytes);
-		// else if (readBytes == 0)
-		// 	throw errorHandler("Client closed connection");
+		else if (readBytes == 0)
+			throw errorHandler("Client closed connection");
 		else
 		{
 			if (errno == EINTR)
@@ -82,14 +82,6 @@ void requestHandler::read(int const &fd)
 			else
 				throw errorHandler("Reading error");
 		}
-	}
-	try
-	{
-		checkTimeout(fd, configUtils::getTime());
-	}
-	catch(const std::exception& e)
-	{
-		throw errorHandler(std::string(e.what()));
 	}
 }
 
@@ -141,9 +133,10 @@ void requestHandler::fillMethodRoute(std::string headerProp)
 void requestHandler::getFileName(t_reqBody &reqBody, std::string value)
 {
 	std::string property = "filename=";
-	size_t pos = value.find(property);
+	std::string trimmed = configUtils::trim(value, "\r\n");
+	size_t pos = trimmed.find(property);
 	if (pos != std::string::npos)
-		reqBody.fileName = value.substr(pos + property.size());
+		reqBody.fileName = trimmed.substr(pos + property.size());
 }
 
 bool requestHandler::isBodyHeader(std::string &h, std::string &v, std::string const &token)
@@ -171,17 +164,12 @@ void requestHandler::fillReqBody()
 	std::string dataAfterBoundary = _rawData.substr(startPos + startBoundary.size());
     std::stringstream ss(dataAfterBoundary);
 	std::string token;
-	std::getline(ss, token, '\n');
+	//std::getline(ss, token, '\n');
 	// Skip initial \r\n after boundary
     if (ss.peek() == '\r') ss.get();
     if (ss.peek() == '\n') ss.get();
 	//Skip headers and extract filename
-	 while (std::getline(ss, token) && !token.empty() && token != "\r")
-    {
-        std::string header, prop;
-        if (isBodyHeader(header, prop, token))
-            getFileName(_request.body, prop);
-    }
+	 while (std::getline(ss, token) && !token.empty() && token != "\r") {getFileName(_request.body, token);}
 	//Read the rest of the body including end boundary
 	std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
 	size_t stopPos = restOfReq.find(endBoundary);
@@ -234,6 +222,7 @@ void requestHandler::checkTimeout(int fd, double sec)
 {
 	std::map<int, double>::iterator res = timeLog.find(fd);
 	int reqTimeout = _host.getHost().hostTimeout;
+	std::cout << "timelog " << std::fixed << res->second << " time left sec " << std::fixed << sec << std::endl;
 	if (sec - res->second >= reqTimeout)
 	{
 		timeLog.erase(fd);
@@ -251,10 +240,10 @@ bool requestHandler::requestComplete(void)
 	std::getline(ss, method, ' ');
 	std::getline(ss, route, ' ');
 
-	_request.method = method;
-	parseRoute(route);
 	if (method == GET || method == HEAD || method == OPTIONS)
 	{
+		_request.method = method;
+		parseRoute(route);
 		while (std::getline(ss, line, '\n'))
 		{
 			if (line == "\r")
@@ -268,9 +257,17 @@ bool requestHandler::requestComplete(void)
 		try
 		{
 			if (!_endBody.empty() && doneReading())
+			{
 				fillReqBody();
+				_request.method = method;
+				parseRoute(route);
+			}
 			else if (doneReading())
+			{
+				_request.method = method;
+				parseRoute(route);
 				fillReqBodyApp();
+			}
 			if (!_request.body.empty())
 				return true;
 		}
@@ -334,8 +331,8 @@ void requestHandler::buildRoute(std::vector<std::string> const &tokens)
 		_request.route = "/";
 	for (size_t i = 0; i < tokens.size(); i++)
 	{
-		_request.route += "/";
-		_request.route += tokens[i];
+		_request.route.append("/", 1);
+		_request.route.append(tokens[i]);
 	}
 }
 
