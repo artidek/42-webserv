@@ -32,15 +32,16 @@ class responseHandler
 		bool emptyBody;
 		bool sendComplete;
 		bool cgi;
+		size_t size;
+		size_t total;
 		std::string path;
 		std::string file;
+		std::string buffer;
 		std::map<std::string, void (responseHandler::*)(void)>runMethod;
 		serverConfig conf;
-		requestHandler const &request;
+		requestHandler request;
 	 	t_response resp;
 		t_route route;
-		responseHandler(responseHandler const &copy);
-		responseHandler &operator=(responseHandler const &copy);
 		void runGet();
 		void runPost();
 		void runHead();
@@ -50,7 +51,7 @@ class responseHandler
 		void allowedMethod(std::string const &root);
 		void fillResponseBody(std::string const &filePath);
 		std::string eTag(std::string const &file);
-		void fillSendBuffer(std::string &buffer);
+		void fillSendBuffer();
 		void validFile(t_route const &route);
 		bool isCgi();
 		void fillHeaders(std::string connection, std::string contLen);
@@ -58,16 +59,24 @@ class responseHandler
 		void getList();
 		void uniqueName(std::string &flName);
 	public:
+		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);
+		responseHandler(responseHandler const &copy);
+		responseHandler &operator=(responseHandler const &copy);
 		~responseHandler(void);
 		void createResponce(void);
 		void sendResponse(int const &fd);
-		void sendToClient(size_t const &size, const char *buff, int const &fd);
+		void sendToClient(int const &fd);
 		t_response const getResponceData(void) const;
 		void sendBad(int const &respCode, int const &fd);
 		int  getRespCode() const;
 		bool responseComplete(void);
 		int findRespCode(std::string const &err);
+		requestHandler const & getRequest() const;
+		size_t getSize() const;
+		size_t getTotal() const;
+		std::string const getBuffer() const;
+		bool getComplete() const;
 };
 
 #endif

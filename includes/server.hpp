@@ -20,7 +20,9 @@ class server
 		static bool stop;
 		static bool stopped;
 		static int epollFd;
+		struct epoll_event event;
 		std::map<int, requestHandler> pendingRequests;
+		std::map<int, responseHandler> pendingResponses;
 		std::vector<serverConfig> configs;
 		std::map<int, serverConfig> fdToHost;
 		std::map<int, serverConfig> listenToHost;

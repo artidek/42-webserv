@@ -33,7 +33,7 @@ s_response::s_response(void)
 	respCodes[503] = "Service Unavailable";
 }
 
-responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) : request(req) {
+responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) : size(0), total(0), request(req) {
 
 	runMethod[GET] = &responseHandler::runGet;
 	runMethod[POST] = &responseHandler::runPost;
@@ -43,6 +43,25 @@ responseHandler::responseHandler(serverConfig const &config, requestHandler cons
 	emptyBody = false;
 	sendComplete = false;
 	cgi = false;
+}
+
+responseHandler::responseHandler(){};
+
+responseHandler::responseHandler(responseHandler const & copy)
+{
+	size = copy.getSize();
+	total = copy.getTotal();
+	buffer = copy.getBuffer();
+	sendComplete = copy.getComplete();
+}
+
+responseHandler &responseHandler::operator=(responseHandler const &copy)
+{
+	size = copy.getSize();
+	total = copy.getTotal();
+	buffer = copy.getBuffer();
+	sendComplete = copy.getComplete();
+	return *this;
 }
 
 responseHandler::~responseHandler(void) {}
@@ -298,7 +317,7 @@ void responseHandler::createResponce(void)
 
 }
 
-void responseHandler::fillSendBuffer(std::string &buffer)
+void responseHandler::fillSendBuffer()
 {
 	std::stringstream ss;
 	std::map<int , std::string>::iterator res = resp.respCodes.find(resp.respCode);
@@ -310,15 +329,15 @@ void responseHandler::fillSendBuffer(std::string &buffer)
 	if (!emptyBody)
 		ss << resp.body;
 	buffer = ss.str();
+	size = buffer.size();
 }
 
-void responseHandler::sendToClient(size_t const &size, const char *buff, int const &fd)
+void responseHandler::sendToClient(int const &fd)
 {
-	size_t total = 0;
 	while (total < size)
 	{
-		int writeBytes = send(fd, buff + total, size - total, 0);
-		if (writeBytes <= 0)
+		int writeBytes = send(fd, buffer.data() + total, size - total, 0);
+		if (writeBytes < 0)
 		{
 			if (errno == EINTR) continue;
 			else if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -326,8 +345,8 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 			else
 				throw errorHandler("Send failed");
 		}
-		// if (writeBytes == 0)
-		// 	throw errorHandler("Peer closed");
+		if (writeBytes == 0)
+			throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
 	if (size == total)
@@ -336,12 +355,11 @@ void responseHandler::sendToClient(size_t const &size, const char *buff, int con
 
 void responseHandler::sendResponse(int const &fd)
 {
-	std::string buffer;
 	if (!cgi)
-		fillSendBuffer(buffer);
+		fillSendBuffer();
 	try
 	{
-		sendToClient(buffer.size(), buffer.c_str(), fd);
+		sendToClient(fd);
 	}
 	catch(const std::exception& e)
 	{
@@ -363,10 +381,8 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 	}
 	else
 		resp.headers["Content-Length:"] = "0";
-	std::string buff;
-	fillSendBuffer(buff);
-	std::cout << "sending bad\n";
-	sendToClient(buff.size(), buff.c_str(), fd);
+	fillSendBuffer();
+	sendToClient(fd);
 }
 
 int  responseHandler::getRespCode(void) const {return resp.respCode;}
@@ -501,3 +517,11 @@ int responseHandler::findRespCode(std::string const &err)
 	}
 	return 0;
 }
+
+size_t responseHandler::getSize() const {return size;}
+
+size_t responseHandler::getTotal() const {return total;}
+
+std::string const responseHandler::getBuffer() const {return buffer;}
+
+bool responseHandler::getComplete() const {return sendComplete;}

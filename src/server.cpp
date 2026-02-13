@@ -209,7 +209,16 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	{
 		resp.createResponce();
 		resp.sendResponse(fd);
-		closeConSock(fd);
+		if (resp.responseComplete())
+			closeConSock(fd);
+		else
+		{
+			std::cout << "size " << resp.getSize() << std::endl;
+			std::cout << "total " << resp.getTotal() << std::endl;
+			pendingResponses[fd] = resp;
+			event.events = EPOLLIN | EPOLLET | EPOLLOUT;
+			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+		}
 	}
 	catch(const std::exception& e)
 	{
@@ -231,10 +240,31 @@ void server::handleClientData(int const &fd)
 	{
 		try
 		{
-			handleRequest(fd, res->second, req);
-			if (isPendingReq(fd))
-				pendingRequests.erase(fd);
-			handleResponse(fd, res->second, req);
+			if (event.events & EPOLLIN)
+			{
+				handleRequest(fd, res->second, req);
+				if (isPendingReq(fd))
+					pendingRequests.erase(fd);
+				handleResponse(fd, res->second, req);
+			}
+			if (event.events & EPOLLOUT)
+			{
+				std::map<int, responseHandler>::iterator resResp = pendingResponses.find(fd);
+				responseHandler resp = resResp->second;
+				resp.sendToClient(fd);
+				std::cout << "size " << resp.getSize() << std::endl;
+				std::cout << "total " << resp.getTotal() << std::endl;
+				if (resp.responseComplete())
+				{
+					event.events = EPOLLIN | EPOLLET;
+					epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+					closeConSock(fd);
+					pendingResponses.erase(fd);
+				}
+				else
+					pendingResponses[fd] = resp;
+			}
+			
 		}
 		catch(const std::exception& e)
 		{
@@ -272,6 +302,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
 		}
 		else
 		{
+			event = events[n];
 			handleClientData(fd);
 		}
 	}
