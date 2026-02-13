@@ -166,7 +166,6 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		else
 			rH = pendingRequests[fd];
 		rH.read(fd);
-		rH.checkTimeout(fd, configUtils::getTime());
 		if (rH.requestComplete())
 		{
 			rH.removeFromTimeLog(fd);
@@ -174,8 +173,7 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		}
 		else
 		{
-			if (!isPendingReq(fd))
-				pendingRequests[fd] = rH;
+			pendingRequests[fd] = rH;
 			throw errorHandler("request incomplete");
 		}
 	}
@@ -195,7 +193,10 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			else
 				badResp.sendBad(400, fd);
 			if (badResp.responseComplete())
+			{
+				std::cout << "response complete\n";
 				closeConSock(fd);
+			}
 		}
 		throw errorHandler(std::string(e.what()));
 	}
@@ -233,7 +234,6 @@ void server::handleClientData(int const &fd)
 			handleRequest(fd, res->second, req);
 			if (isPendingReq(fd))
 				pendingRequests.erase(fd);
-			std::cout << "request complete name is " << req.getReqData().body.fileName << " route is " << req.getReqData().route << std::endl;
 			handleResponse(fd, res->second, req);
 		}
 		catch(const std::exception& e)

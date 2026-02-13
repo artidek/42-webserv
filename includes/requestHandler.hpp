@@ -32,28 +32,34 @@ typedef struct s_request
 class requestHandler
 {
 	private:
+		int _readLen;
 		serverConfig _host;
 		std::string _rawData;
 		std::string _endBody;
-		static std::map<int, double>timeLog;
+		std::string _readHeaders;
+		static std::map<int, std::time_t>timeLog;
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
 		size_t _contLen;
 		static std::map<std::string, std::string> initHeaders(void);
+		std::vector<std::vector<char> > buffChunks;
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
 		void fillReqBody();
 		void fillMethodRoute(std::string headerProp);
 		void getFileName(t_reqBody &reqBody, std::string value);
-		void setBodyEnd(std::string token);
-		void setContLen(void);
+		void setBodyEnd();
+		void setContLen();
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
+		bool _isHeader;
 		void parseRoute(std::string const &rawRoute);
 		void extractPathInfo(std::stringstream const &ss);
 		void buildRoute(std::vector<std::string> const &tokens);
 		void fillReqBodyApp();
+		void isHeaders();
 		bool doneReading();
+		std::string combine();
 	public:
 		requestHandler(void);
 		requestHandler(serverConfig const &copy);
@@ -68,10 +74,14 @@ class requestHandler
 		serverConfig const getConfig(void) const;
 		std::string const getEndBody(void) const;
 		std::stack<std::string> const getTokens(void) const;
-		void addToTimeLog(int fd, double sec);
+		void addToTimeLog(int fd, std::time_t sec);
 		void removeFromTimeLog(int const & fd);
 		size_t getContLen() const;
-		void checkTimeout(int fd, double sec);
+		void checkTimeout(int fd);
+		int getReadLen() const;
+		bool getIsheader() const;
+		std::string const getReadHeader() const;
+		std::vector<std::vector<char> > const getBufChunks() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

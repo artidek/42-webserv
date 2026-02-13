@@ -6,7 +6,7 @@
 #include <iostream>
 #include <unistd.h>
 
-std::map<int, double>requestHandler::timeLog;
+std::map<int, std::time_t>requestHandler::timeLog;
 std::map<std::string, std::string> requestHandler::_headers = initHeaders();
 
 std::map<std::string, std::string> requestHandler::initHeaders(void)
@@ -31,7 +31,7 @@ bool t_reqBody::empty(void)
 	return false;
 }
 
-requestHandler::requestHandler(serverConfig const &conf) : _host(conf), _contLen(0) {}
+requestHandler::requestHandler(serverConfig const &conf) : _readLen(0), _host(conf), _contLen(0), _isHeader(false) {}
 
 requestHandler::requestHandler(void) {}
 
@@ -45,6 +45,10 @@ requestHandler::requestHandler(requestHandler const &copy)
 	_tokens = copy.getTokens();
 	_request = copy.getReqData();
 	_contLen = copy.getContLen();
+	_readLen = copy.getReadLen();
+	_isHeader = copy.getIsheader();
+	_readHeaders = copy.getReadHeader();
+	buffChunks = copy.getBufChunks();
 }
 
 requestHandler &requestHandler::operator=(requestHandler const &copy)
@@ -55,6 +59,10 @@ requestHandler &requestHandler::operator=(requestHandler const &copy)
 	_tokens = copy.getTokens();
 	_request = copy.getReqData();
 	_contLen = copy.getContLen();
+	_readLen = copy.getReadLen();
+	_isHeader = copy.getIsheader();
+	_readHeaders = copy.getReadHeader();
+	buffChunks = copy.getBufChunks();
 	return *this;
 }
 
@@ -63,14 +71,16 @@ std::string const &requestHandler::getRawData(void) const { return _rawData; }
 void requestHandler::read(int const &fd)
 {
 	int readBytes = 0;
-
 	while(true)
 	{
 		char buffer[BUFFER_SIZE + 1];
 		readBytes = recv(fd, buffer, sizeof(buffer),0);
-		//buffer[readBytes] = 0;
 		if (readBytes > 0)
-			_rawData.append(buffer, readBytes);
+		{
+			std::vector<char>chunk(buffer, buffer + readBytes);
+			buffChunks.push_back(chunk);
+			_readLen += readBytes;
+		}
 		else if (readBytes == 0)
 			throw errorHandler("Client closed connection");
 		else
@@ -83,15 +93,16 @@ void requestHandler::read(int const &fd)
 				throw errorHandler("Reading error");
 		}
 	}
+	checkTimeout(fd);
 }
 
-void requestHandler::setBodyEnd(std::string token)
+void requestHandler::setBodyEnd()
 {
 	std::string find = "boundary=";
-	std::string::size_type found = token.find(find);
+	std::string::size_type found = _readHeaders.find(find);
 	if (found != std::string::npos)
 	{
-		std::stringstream ss(token.substr(found + find.size()));
+		std::stringstream ss(_readHeaders.substr(found + find.size()));
 		std::getline(ss, _endBody);
 		if (_endBody[_endBody.size() - 1] == '\r')
 			_endBody.resize(_endBody.size() - 1);
@@ -164,7 +175,6 @@ void requestHandler::fillReqBody()
 	std::string dataAfterBoundary = _rawData.substr(startPos + startBoundary.size());
     std::stringstream ss(dataAfterBoundary);
 	std::string token;
-	//std::getline(ss, token, '\n');
 	// Skip initial \r\n after boundary
     if (ss.peek() == '\r') ss.get();
     if (ss.peek() == '\n') ss.get();
@@ -211,19 +221,19 @@ void requestHandler::parse(void)
 
 t_request const requestHandler::getReqData(void) const { return _request; }
 
-void requestHandler::addToTimeLog(int fd, double sec)
+void requestHandler::addToTimeLog(int fd, std::time_t sec)
 {
-	std::map<int, double>::iterator res = timeLog.find(fd);
+	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
 	if (res == timeLog.end())
 		timeLog[fd] = sec;
 }
 
-void requestHandler::checkTimeout(int fd, double sec)
+void requestHandler::checkTimeout(int fd)
 {
-	std::map<int, double>::iterator res = timeLog.find(fd);
+	std::time_t now = std::time(NULL);
+	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
 	int reqTimeout = _host.getHost().hostTimeout;
-	std::cout << "timelog " << std::fixed << res->second << " time left sec " << std::fixed << sec << std::endl;
-	if (sec - res->second >= reqTimeout)
+	if (now - res->second >= reqTimeout)
 	{
 		timeLog.erase(fd);
 		throw errorHandler("Request Timeout");
@@ -233,48 +243,32 @@ void requestHandler::checkTimeout(int fd, double sec)
 
 bool requestHandler::requestComplete(void)
 {
-	std::stringstream ss(_rawData.c_str());
-	std::string method;
-	std::string route;
-	std::string line;
-	std::getline(ss, method, ' ');
-	std::getline(ss, route, ' ');
-
-	if (method == GET || method == HEAD || method == OPTIONS)
+	if (!_isHeader)
+		isHeaders();
+	if (_isHeader)
 	{
-		_request.method = method;
-		parseRoute(route);
-		while (std::getline(ss, line, '\n'))
+		if (_request.method == GET || _request.method  == HEAD || _request.method  == OPTIONS)
 		{
-			if (line == "\r")
-				return true;
+			_rawData = combine();
+			return true;
 		}
-	}
-	else
-	{
-		setBodyEnd(_rawData);
-		setContLen();
-		try
+		if (doneReading())
 		{
-			if (!_endBody.empty() && doneReading())
+			setBodyEnd();
+			_rawData = combine();
+			try
 			{
-				fillReqBody();
-				_request.method = method;
-				parseRoute(route);
+				if (!_endBody.empty())
+					fillReqBody();
+				else
+					fillReqBodyApp();
 			}
-			else if (doneReading())
+			catch(const std::exception& e)
 			{
-				_request.method = method;
-				parseRoute(route);
-				fillReqBodyApp();
+				std::string err(e.what());
+				throw errorHandler(FROM, "requestComplete " + err);
 			}
-			if (!_request.body.empty())
-				return true;
-		}
-		catch(const std::exception& e)
-		{
-			std::cout << e.what() << " it comes from request complete\n" << std::endl;
-			return false;
+			return true;
 		}
 	}
 	return false;
@@ -352,11 +346,11 @@ std::ostream &operator<< (std::ostream &o, requestHandler const &req)
 void requestHandler::setContLen()
 {
 	std::string contLenHead("Content-Length:");
-	std::string::size_type found = _rawData.find(contLenHead);
+	std::string::size_type found = _readHeaders.find(contLenHead);
 
 	if (found != std::string::npos)
 	{
-		std::stringstream ss(_rawData.substr(found + contLenHead.size()));
+		std::stringstream ss(_readHeaders.substr(found + contLenHead.size()));
 		std::string contLen;
 		if (std::getline(ss, contLen, '\n'))
 		{
@@ -371,11 +365,42 @@ size_t requestHandler::getContLen(void) const {return _contLen;}
 
 bool requestHandler::doneReading()
 {
-	std::stringstream ss(_rawData);
-	std::string token;
-	while (std::getline(ss, token) && !token.empty() && token != "\r") {}
-	 std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
-	if (restOfReq.size() == _contLen)
+	if (_readLen == static_cast<int>(_contLen))
 		return true;
 	return false;
 }
+
+std::string requestHandler::combine()
+{
+	size_t totalSize = 0;
+    std::vector<std::vector<char> >::const_iterator it;
+    for (it = buffChunks.begin(); it !=  buffChunks.end(); ++it)
+        totalSize += it->size();
+    std::string full;
+    full.reserve(totalSize);
+    for (it =  buffChunks.begin(); it !=  buffChunks.end(); ++it)
+        full.append(&(*it)[0], it->size());
+    return full;
+}
+
+void requestHandler::isHeaders()
+{
+	std::string combined = combine();
+	size_t found = combined.find("\r\n\r\n");
+	if (found != std::string::npos)
+	{
+		_readLen -= static_cast<int>(found) + 4;
+		fillMethodRoute(combined);
+		_readHeaders = combined.substr(0, found);
+		setContLen();
+		_isHeader = true;
+	}
+}
+
+int requestHandler::getReadLen() const {return _readLen;}
+
+bool requestHandler::getIsheader() const {return _isHeader;}
+
+std::string const requestHandler::getReadHeader() const {return _readHeaders;}
+
+std::vector<std::vector<char> > const requestHandler::getBufChunks() const {return buffChunks;}

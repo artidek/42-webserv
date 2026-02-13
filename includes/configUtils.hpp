@@ -7,6 +7,7 @@
 #include "../includes/serverConfig.hpp"
 #include <dirent.h>
 #include <stack>
+#include <ctime>
 
 typedef struct s_dayMonth
 {
@@ -38,7 +39,7 @@ class configUtils
 		static std::string trim (std::string const &src, std::string const & set);
 		static std::string formatTime(int const &tm);
 		static std::string getDateTime(void);
-		static double getTime(void);
+		static std::time_t getTime(void);
 		static std::string buildPath(std::string const &path, std::string const &name);
 };
 #endif

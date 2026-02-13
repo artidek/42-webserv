@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 20:51:09 by aobshatk          #+#    #+#             */
-/*   Updated: 2025/11/17 14:16:03 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/13 10:13:28 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,8 @@ enum {
 	BIND_FAILED,
 	PRT_MARK_FAILED,
 	EPOLL_CREATE_FAIL,
-	EVENTS_FAILED
+	EVENTS_FAILED,
+	FROM
 };
 
 class errorHandler : public std::exception

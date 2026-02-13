@@ -225,20 +225,10 @@ std::string configUtils::getDateTime(void)
 	return ss.str();
 }
 
-double configUtils::getTime(void)
+std::time_t configUtils::getTime(void)
 {
-	std::time_t timer;
-    std::tm y2k;
-
-    std::memset(&y2k, 0, sizeof(y2k));
-
-    y2k.tm_year = 100;   // 2000
-    y2k.tm_mon  = 0;     // Jan
-    y2k.tm_mday = 1;
-    y2k.tm_isdst = -1;   // <-- critical
-
-    std::time(&timer);
-    return std::difftime(timer, std::mktime(&y2k));
+	std::time_t now = std::time(NULL);
+    return now;
 }
 
 std::string configUtils::buildPath(std::string const &path, std::string const &name)
