@@ -255,8 +255,7 @@ void server::handleClientData(int const &fd)
 				resp.sendToClient(fd);
 				if (resp.responseComplete())
 				{
-					event.events = EPOLLIN | EPOLLET;
-					epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+					disarmOut(fd);
 					closeConSock(fd);
 					pendingResponses.erase(fd);
 				}
