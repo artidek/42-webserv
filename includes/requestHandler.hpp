@@ -24,7 +24,6 @@ typedef struct s_request
 	std::string route;
 	std::string query;
 	std::string page;
-	std::string path_info;
 	t_reqBody body;
 	std::map<std::string, std::string> headers;
 } t_request;
@@ -54,12 +53,11 @@ class requestHandler
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
 		bool _isHeader;
 		void parseRoute(std::string const &rawRoute);
-		void extractPathInfo(std::stringstream const &ss);
-		void buildRoute(std::vector<std::string> const &tokens);
 		void fillReqBodyApp();
 		void isHeaders();
 		bool doneReading();
 		std::string combine();
+		void getRoutePage(std::string upToLastSlash, std::string parseRoute, size_t lastSlash);
 	public:
 		requestHandler(void);
 		requestHandler(serverConfig const &copy);

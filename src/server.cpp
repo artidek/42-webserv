@@ -171,19 +171,12 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		else
 			rH = pendingRequests[fd];
 		rH.read(fd);
-		if (rH.requestComplete())
-		{
-			rH.removeFromTimeLog(fd);
-			rH.parse();
-		}
-		else
-			pendingRequests[fd] = rH;
 	}
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
 		//bad request should be handled with err response and closing connection
-		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
+		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error" || err == "Not Found")
 		{
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
@@ -244,9 +237,15 @@ void server::handleClientData(int const &fd)
 			if (event.events & EPOLLIN)
 			{
 				handleRequest(fd, res->second, req);
-				if (isPendingReq(fd))
+				if (req.requestComplete())
+				{
+					req.removeFromTimeLog(fd);
 					pendingRequests.erase(fd);
-				handleResponse(fd, res->second, req);
+					req.parse();
+					handleResponse(fd, res->second, req);
+				}
+				else
+					pendingRequests[fd] = req;
 			}
 			if (event.events & EPOLLOUT)
 			{

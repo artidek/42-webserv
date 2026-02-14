@@ -1,49 +1,74 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset="UTF-8">
-    <title>Upload & Delete File on Localhost</title>
+	<meta charset="UTF-8">
+	<title>Upload & Delete File on Localhost</title>
 </head>
+
 <body>
-    <h2>Upload File</h2>
+	<h2>Upload File</h2>
 
-    <!-- Upload Form -->
-    <form action="http://localhost:8080/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="myfile" required>
-        <br><br>
-        <button type="submit">Upload</button>
-    </form>
+	<!-- Upload Form -->
+	<form action="http://localhost:8080/upload" method="POST" enctype="multipart/form-data">
+		<input type="file" name="myfile" required>
+		<br><br>
+		<button type="submit">Upload</button>
+	</form>
 
-    <hr>
+	<hr>
 
-    <h2>Delete File From Server</h2>
+	<h2>Delete File From Server</h2>
 
-    <label for="deleteFilename">Filename to delete:</label><br>
-    <input type="text" id="deleteFilename" placeholder="example.txt">
-    <br><br>
-    <button onclick="deleteFile()">Delete File</button>
+	<label for="deleteFilename">Filename to delete:</label><br>
+	<input type="text" id="deleteFilename" placeholder="example.txt">
+	<br><br>
 
-    <script>
-        function deleteFile() {
-            const filename = document.getElementById("deleteFilename").value.trim();
+	<button id="deleteBtn">Delete File</button>
 
-            if (!filename) {
-                alert("Please enter a filename.");
-                return;
-            }
+	<p id="deleteStatus" style="margin-top:10px;"></p>
 
-            fetch("http://localhost/delete", {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ filename })
-            })
-            .then(res => res.text())
-            .then(msg => alert(msg))
-            .catch(err => alert("Error: " + err));
-        }
-    </script>
+	<script>
+		document.getElementById("deleteBtn").addEventListener("click", async () => {
+			const filename = document.getElementById("deleteFilename").value.trim();
+			const statusEl = document.getElementById("deleteStatus");
+
+			if (!filename) {
+				statusEl.textContent = "Please enter a filename.";
+				statusEl.style.color = "red";
+				return;
+			}
+
+			statusEl.textContent = "Deleting...";
+			statusEl.style.color = "black";
+
+			try {
+				const res = await fetch(
+					`http://localhost:8080/upload/${encodeURIComponent(filename)}`,
+					{ method: "DELETE" }
+				);
+
+				const text = await res.text();
+
+				if (!res.ok) {
+					throw new Error(text || "Delete failed");
+				}
+
+				statusEl.textContent = text || "File deleted successfully.";
+				statusEl.style.color = "green";
+
+				// optional
+				document.getElementById("deleteFilename").value = "";
+
+			} catch (err) {
+				statusEl.textContent = err.message;
+				statusEl.style.color = "red";
+			}
+		});
+	</script>
+
+
 
 </body>
+
 </html>

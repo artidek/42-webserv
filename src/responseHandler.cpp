@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <cstdio>
 
 s_response::s_response(void)
 {
@@ -180,7 +181,6 @@ void responseHandler::runPost(void)
 			if (conf.getLocation(route.newRoot).enableUpload)
 			{
 				std::string filename = request.getReqData().body.fileName;
-				std::cout << "filename " << request.getReqData().body.fileName << std::endl;
 				filename = configUtils::trim(filename, "\"");
 				uniqueName(filename);
 				std::string path = route.newRoot;
@@ -215,8 +215,6 @@ void responseHandler::runHead(void)
 	t_route route;
 	try
 	{
-		isRoute(route);
-		allowedMethod(route.newRoot);
 		resp.respCode = 204;
 		if (route.page == "none")
 		{
@@ -239,8 +237,6 @@ void responseHandler::runHead(void)
 
 void responseHandler::runDelete(void)
 {
-	t_route route;
-	std::string path;
 	try
 	{
 		if (isCgi())
@@ -250,12 +246,22 @@ void responseHandler::runDelete(void)
 		}
 		else
 		{
-			//upload logic goes here
+			if (request.getReqData().page.empty())
+			{	
+				resp.respCode = 404;
+				throw errorHandler(resp.respCodes[404]);
+			}
+			if (std::remove(path.c_str()) != 0)
+			{
+				resp.respCode = 403;
+				throw errorHandler(resp.respCodes[403]);
+			}
+			fillResponseBody("etc/error/success.html");
 		}
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << '\n';
+		throw errorHandler(std::string(e.what()));
 	}
 }
 

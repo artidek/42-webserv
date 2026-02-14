@@ -247,7 +247,7 @@ bool requestHandler::requestComplete(void)
 		isHeaders();
 	if (_isHeader)
 	{
-		if (_request.method == GET || _request.method  == HEAD || _request.method  == OPTIONS)
+		if (_request.method == GET || _request.method  == HEAD || _request.method  == OPTIONS || _request.method == DELETE)
 		{
 			_rawData = combine();
 			return true;
@@ -284,49 +284,40 @@ void requestHandler::removeFromTimeLog(int const &fd) {timeLog.erase(fd);}
 
 void requestHandler::parseRoute(std::string const &rawRoute)
 {
-	std::vector<std::string> tokens;
-	std::string token;
-	std::stringstream ss;
-	size_t found = rawRoute.find("?");
-	if (found != std::string::npos)
+	std::string parseRoute = rawRoute;
+	size_t queryPos = parseRoute.find("?");
+	if (queryPos != std::string::npos)
 	{
-		ss << rawRoute.substr(0, found);
-		_request.query = rawRoute.substr(found + 1);
+		_request.query = parseRoute.substr(queryPos + 1);
+		parseRoute = parseRoute.substr(0, queryPos);
 	}
-	else
-		ss << rawRoute;
-	while (std::getline(ss, token, '/'))
+	size_t lastSlash = parseRoute.rfind("/");
+	std::string upToLastSlash;
+	if (parseRoute.size() > 1 && lastSlash == 0)
+		upToLastSlash = parseRoute.substr(0, 1);
+	else if(lastSlash > 0)
+		upToLastSlash = parseRoute.substr(0, lastSlash);
+	if (!upToLastSlash.empty())
+		getRoutePage(upToLastSlash, parseRoute, lastSlash);
+	std::map<std::string, t_route>routes = _host.getRoutes();
+	std::map<std::string, t_route>::iterator res = routes.find(parseRoute);
+	if (res != routes.end())
 	{
-		if (token.find(".") != std::string::npos)
-		{
-			_request.page = token;
-			extractPathInfo(ss);
-			break;
-		}
-		if (!token.empty())
-			tokens.push_back(token);
-	}
-	buildRoute(tokens);
-}
-
-void requestHandler::extractPathInfo(std::stringstream const &ss)
-{
-	std::string pathInfo = "/";
-	if (!ss.eof())
-	{
-		pathInfo += ss.str();
-		_request.path_info = pathInfo;
+		if (!_request.page.empty())
+			_request.page.clear();
+		_request.route = parseRoute;
 	}
 }
 
-void requestHandler::buildRoute(std::vector<std::string> const &tokens)
+void requestHandler::getRoutePage(std::string upToLastSlash, std::string parseRoute, size_t lastSlash)
 {
-	if (tokens.empty())
-		_request.route = "/";
-	for (size_t i = 0; i < tokens.size(); i++)
+	std::map<std::string, t_route>::iterator res;
+	std::map<std::string, t_route>routes = _host.getRoutes();
+	res = routes.find(upToLastSlash);
+	if (res != routes.end())
 	{
-		_request.route.append("/", 1);
-		_request.route.append(tokens[i]);
+		_request.page = parseRoute.substr(lastSlash + 1);
+		_request.route = upToLastSlash;
 	}
 }
 
@@ -337,7 +328,6 @@ std::ostream &operator<< (std::ostream &o, requestHandler const &req)
 	o << "route: " << reqData.route << std::endl;
 	o << "query: " << reqData.query << std::endl;
 	o << "page: " << reqData.page << std::endl;
-	o << "path_info: " << reqData.path_info<< std::endl;
 	o << "body content: " << reqData.body.content << std::endl;
 	o << "body filename: " << reqData.body.fileName << std::endl;
 	return o;
