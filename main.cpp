@@ -1,6 +1,7 @@
 #include <iostream>
 #include "includes/configParser.hpp"
 #include "includes/server.hpp"
+#include <csignal>
 
 int main (int argc, char **argv)
 {
@@ -32,6 +33,7 @@ int main (int argc, char **argv)
 			configParser::parseConfig(argv[1]);
 			server srv(configParser::getConfigs());
 			srv.set();
+			std::signal(SIGINT, server::handle_signal);
 			srv.run();
 		}
 		catch(const std::exception& e)

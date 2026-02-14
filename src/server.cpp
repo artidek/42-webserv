@@ -65,6 +65,7 @@ void server::createSockets(serverConfig conf)
 
 	std::vector<addrinfo *> infos;
 	host = conf.getHost();
+	int yes = 1;
 	try
 	{
 		setAddrInfo(infos, host);
@@ -72,6 +73,7 @@ void server::createSockets(serverConfig conf)
 		{
 			sfd = socket(infos[i]->ai_family, infos[i]->ai_socktype,
 					infos[i]->ai_protocol);
+			setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 			if (sfd == -1)
 				throw errorHandler(SOCKET_FAILED, std::string(strerror(errno)));
 			if (bind(sfd, infos[i]->ai_addr, infos[i]->ai_addrlen) == -1)
@@ -132,7 +134,10 @@ void server::readyEvents(int &nfds, struct epoll_event *events)
 {
 	nfds = epoll_wait(epollFd, events, MAX_EVENTS, -1); //wait for events and put them to events buffer
 	if (nfds == - 1)
-		throw errorHandler(EVENTS_FAILED, std::string(strerror(errno)));
+	{
+		if (!(errno == EINTR && stop))
+			throw errorHandler(EVENTS_FAILED, std::string(strerror(errno)));
+	}
 }
 
 bool server::listenSocket(int const &fd, serverConfig &conf)
@@ -172,10 +177,7 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			rH.parse();
 		}
 		else
-		{
 			pendingRequests[fd] = rH;
-			throw errorHandler("request incomplete");
-		}
 	}
 	catch(const std::exception& e)
 	{
@@ -183,7 +185,6 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 		//bad request should be handled with err response and closing connection
 		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
 		{
-			std::cout << "here we have " << err << std::endl;
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
 			responseHandler badResp(rH.getConfig(), rH);
@@ -192,13 +193,12 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 				badResp.sendBad(rc, fd);
 			else
 				badResp.sendBad(400, fd);
-			if (badResp.responseComplete())
+			if (!badResp.responseComplete())
 			{
-				std::cout << "response complete\n";
-				closeConSock(fd);
+				pendingResponses[fd] = badResp;
+				armOut(fd);
 			}
 		}
-		throw errorHandler(std::string(e.what()));
 	}
 }
 
@@ -213,11 +213,8 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 			closeConSock(fd);
 		else
 		{
-			std::cout << "size " << resp.getSize() << std::endl;
-			std::cout << "total " << resp.getTotal() << std::endl;
 			pendingResponses[fd] = resp;
-			event.events = EPOLLIN | EPOLLET | EPOLLOUT;
-			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+			armOut(fd);
 		}
 	}
 	catch(const std::exception& e)
@@ -226,7 +223,11 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 		if (err != "Send failed" || err != "Peer closed")
 		{
 			resp.sendBad(resp.getRespCode(), fd);
-			closeConSock(fd);
+			if (!resp.responseComplete())
+			{
+				pendingResponses[fd] = resp;
+				armOut(fd);
+			}
 		}
 	}
 }
@@ -252,8 +253,6 @@ void server::handleClientData(int const &fd)
 				std::map<int, responseHandler>::iterator resResp = pendingResponses.find(fd);
 				responseHandler resp = resResp->second;
 				resp.sendToClient(fd);
-				std::cout << "size " << resp.getSize() << std::endl;
-				std::cout << "total " << resp.getTotal() << std::endl;
 				if (resp.responseComplete())
 				{
 					event.events = EPOLLIN | EPOLLET;
@@ -268,9 +267,7 @@ void server::handleClientData(int const &fd)
 		}
 		catch(const std::exception& e)
 		{
-			std::cout << e.what() << " it comes from client\n" << std::endl;
-			// close(fd);
-			// fdToHost.erase(fd);
+			closeConSock(fd);
 		}
 	}
 }
@@ -323,11 +320,11 @@ void server::run()
 		{
 			std::string err = "Server fatal error causing server stop: ";
 			err += e.what();
-			closeSfds();
-			close(epollFd);
+			stopServer();
 			throw errorHandler(err);
 		}
 	}
+	stopServer();
 }
 
 void server::closeConSock(int const &fd)
@@ -335,4 +332,28 @@ void server::closeConSock(int const &fd)
 	epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 	close(fd);
 	fdToHost.erase(fd);
+}
+
+void server::handle_signal(int sig)
+{
+	if (sig)
+		stop = true;
+}
+
+void server::stopServer()
+{
+	closeSfds();
+	close(epollFd);
+}
+
+void server::armOut(int fd)
+{
+	event.events = EPOLLIN | EPOLLET | EPOLLOUT;
+	epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+}
+
+void server::disarmOut(int fd)
+{
+	event.events = EPOLLIN | EPOLLET;
+	epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
 }

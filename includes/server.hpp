@@ -43,11 +43,15 @@ class server
 		void handleRequest(int const &fd, serverConfig const &conf, requestHandler &rH);
 		void handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req);
 		void closeConSock(int const &fd);
+		void stopServer();
+		void armOut(int fd);
+		void disarmOut(int fd);
 	public:
 		server(std::vector<serverConfig> const &conf);
 		~server(void);
 		void set();
 		void run();
+		static void handle_signal(int sig);
 };
 
 #endif	
