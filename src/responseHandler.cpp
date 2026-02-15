@@ -212,18 +212,21 @@ void responseHandler::runPost(void)
 
 void responseHandler::runHead(void)
 {
-	t_route route;
 	try
 	{
-		resp.respCode = 204;
-		if (route.page == "none")
+		if (request.getReqData().page.empty() || access(path.c_str(), R_OK) != 0)
 		{
-			resp.respCode = 403;
-			throw errorHandler("Forbiddden");
+			resp.respCode = 404;
+			throw errorHandler(resp.respCodes[404]);
 		}
+		std::fstream file(path.c_str());
+		std::stringstream ss;
+		ss << file.rdbuf();
+		std::stringstream size;
+		size << ss.str().size();
 		resp.headers["Server:"] = SRV;
 		resp.headers["Date:"] = configUtils::getDateTime();
-		resp.headers["Content-Length:"] = "0";
+		resp.headers["Content-Length:"] = size.str();
 		resp.headers["Connection:"] = "close";
 		resp.headers["ETag:"] = eTag(route.newRoot + route.page);
 		resp.headers["Accept-Ranges:"] = "bytes";
@@ -247,7 +250,7 @@ void responseHandler::runDelete(void)
 		else
 		{
 			if (request.getReqData().page.empty())
-			{	
+			{
 				resp.respCode = 404;
 				throw errorHandler(resp.respCodes[404]);
 			}

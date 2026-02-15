@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HEAD Method Test</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      margin-top: 15px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>HTTP HEAD Method Test</h1>
+
+  <label>
+    URL to test:
+    <input type="text" id="url" size="40" value="http://localhost:8080/">
+  </label>
+
+  <br><br>
+
+  <button onclick="sendHead()">Send HEAD Request</button>
+
+   <nav>
+        <a href="/index.html">Home</a> |
+        <a href="/about/about.html">About</a> |
+        <a href="/contact/contact.html">Contact</a> |
+		<a href="/upload/form">Upload</a> |
+		<a href="/list">List dir</a>
+    </nav>
+
+  <pre id="output">Waiting...</pre>
+
+  <script>
+    async function sendHead() {
+      const url = document.getElementById("url").value;
+      const output = document.getElementById("output");
+
+      output.textContent = "Sending HEAD request...\n";
+
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+
+        let text = `Status: ${response.status} ${response.statusText}\n\nHeaders:\n`;
+
+        for (const [key, value] of response.headers.entries()) {
+          text += `${key}: ${value}\n`;
+        }
+
+        output.textContent = text;
+      } catch (err) {
+        output.textContent = "Error:\n" + err;
+      }
+    }
+  </script>
+
+</body>
+</html>
