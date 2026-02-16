@@ -207,7 +207,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 	responseHandler resp(conf, req);
 	try
 	{
-		resp.createResponce();
+		resp.createResponce(envp);
 		resp.sendResponse(fd);
 		if (resp.responseComplete())
 			closeConSock(fd);

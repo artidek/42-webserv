@@ -58,14 +58,14 @@ class responseHandler
 		std::string getExt (std::string const &path);
 		void getList();
 		void uniqueName(std::string &flName);
-		void runCgi();
+		void runCgi(std::vector<std::string>env);
 	public:
 		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
 		~responseHandler(void);
-		void createResponce(void);
+		void createResponce(std::vector<std::string> env);
 		void sendResponse(int const &fd);
 		void sendToClient(int const &fd);
 		t_response const getResponceData(void) const;

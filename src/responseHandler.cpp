@@ -270,7 +270,7 @@ void responseHandler::isMethod(std::string &mtd)
 	}
 }
 
-void responseHandler::createResponce(void)
+void responseHandler::createResponce(std::vector<std::string> env)
 {
 	std::string method;
 	try
@@ -293,7 +293,7 @@ void responseHandler::createResponce(void)
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
 		if (isCgi())
-			runCgi();
+			runCgi(env);
 		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
@@ -515,7 +515,8 @@ std::string const responseHandler::getBuffer() const {return buffer;}
 
 bool responseHandler::getComplete() const {return sendComplete;}
 
-void responseHandler::runCgi()
+void responseHandler::runCgi(std::vector<std::string> env)
 {
+	(void)env;
 	//cgi execution goes here
 }
