@@ -105,11 +105,13 @@ void responseHandler::isRoute(t_route &route)
 	try
 	{
 		route = conf.getRoute(request.getReqData().route);
+		
 	}
 	catch(const std::exception& e)
 	{
 		resp.respCode = 404;
-		throw errorHandler(resp.respCodes[404]);
+		std::string err(e.what());
+		throw errorHandler(FROM, "isRoute" + err);
 	}
 
 }
@@ -137,20 +139,16 @@ void responseHandler::runGet(void)
 	std::stringstream ss;
 	try
 	{
+		t_location location = conf.getLocation(route.newRoot);
 		if (path.substr(path.size() - 4) == "none")
 		{
-			if (conf.getLocation(route.newRoot).enableListing)
+			if (location.enableListing)
 				getList();
 			else
 			{
 				resp.respCode = 403;
 				throw errorHandler(resp.respCodes[403]);
 			}
-		}
-		else if (isCgi())
-		{
-			cgi = true;
-			//cgi handler goes here
 		}
 		else
 		{
@@ -167,7 +165,8 @@ void responseHandler::runGet(void)
 	}
 	catch(const std::exception& e)
 	{
-		throw errorHandler(std::string(e.what()));
+		resp.respCode = 404;
+		throw errorHandler(FROM, "runGet " + std::string(e.what()));
 	}
 
 }
@@ -198,11 +197,6 @@ void responseHandler::runPost(void)
 				throw errorHandler(resp.respCodes[403]);
 			}
 		}
-		if (isCgi())
-		{
-			cgi = true;
-			//cgi handler goes here
-		}
 	}
 	catch(const std::exception& e)
 	{
@@ -212,55 +206,39 @@ void responseHandler::runPost(void)
 
 void responseHandler::runHead(void)
 {
-	try
+	if (request.getReqData().page.empty() || access(path.c_str(), R_OK) != 0)
 	{
-		if (request.getReqData().page.empty() || access(path.c_str(), R_OK) != 0)
-		{
-			resp.respCode = 404;
-			throw errorHandler(resp.respCodes[404]);
-		}
-		std::fstream file(path.c_str());
-		std::stringstream ss;
-		ss << file.rdbuf();
-		std::stringstream size;
-		size << ss.str().size();
-		resp.headers["Server:"] = SRV;
-		resp.headers["Date:"] = configUtils::getDateTime();
-		resp.headers["Content-Length:"] = size.str();
-		resp.headers["Connection:"] = "close";
-		resp.headers["ETag:"] = eTag(route.newRoot + route.page);
-		resp.headers["Accept-Ranges:"] = "bytes";
-
+		resp.respCode = 404;
+		throw errorHandler(resp.respCodes[404]);
 	}
-	catch(const std::exception& e)
-	{
-		throw errorHandler(std::string(e.what()));
-	}
+	std::fstream file(path.c_str());
+	std::stringstream ss;
+	ss << file.rdbuf();
+	std::stringstream size;
+	size << ss.str().size();
+	resp.headers["Server:"] = SRV;
+	resp.headers["Date:"] = configUtils::getDateTime();
+	resp.headers["Content-Length:"] = size.str();
+	resp.headers["Connection:"] = "close";
+	resp.headers["ETag:"] = eTag(route.newRoot + route.page);
+	resp.headers["Accept-Ranges:"] = "bytes";
 }
 
 void responseHandler::runDelete(void)
 {
 	try
 	{
-		if (isCgi())
+		if (request.getReqData().page.empty())
 		{
-			cgi = true;
-			//cgi handler goes here
+			resp.respCode = 404;
+			throw errorHandler(resp.respCodes[404]);
 		}
-		else
+		if (std::remove(path.c_str()) != 0)
 		{
-			if (request.getReqData().page.empty())
-			{
-				resp.respCode = 404;
-				throw errorHandler(resp.respCodes[404]);
-			}
-			if (std::remove(path.c_str()) != 0)
-			{
-				resp.respCode = 403;
-				throw errorHandler(resp.respCodes[403]);
-			}
-			fillResponseBody("etc/error/success.html");
+			resp.respCode = 403;
+			throw errorHandler(resp.respCodes[403]);
 		}
+		fillResponseBody("etc/error/success.html");
 	}
 	catch(const std::exception& e)
 	{
@@ -314,6 +292,8 @@ void responseHandler::createResponce(void)
 		}
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
+		if (isCgi())
+			runCgi();
 		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
@@ -534,3 +514,8 @@ size_t responseHandler::getTotal() const {return total;}
 std::string const responseHandler::getBuffer() const {return buffer;}
 
 bool responseHandler::getComplete() const {return sendComplete;}
+
+void responseHandler::runCgi()
+{
+	//cgi execution goes here
+}

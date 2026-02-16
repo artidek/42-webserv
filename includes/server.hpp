@@ -27,6 +27,7 @@ class server
 		std::map<int, serverConfig> fdToHost;
 		std::map<int, serverConfig> listenToHost;
 		std::vector<int> socketFds;
+		std::vector<std::string> envp;
 		server(void);
 		server(server const &copy);
 		server &operator=(server const &copy);
@@ -47,7 +48,7 @@ class server
 		void armOut(int fd);
 		void disarmOut(int fd);
 	public:
-		server(std::vector<serverConfig> const &conf);
+		server(std::vector<serverConfig> const &conf, char **env);
 		~server(void);
 		void set();
 		void run();

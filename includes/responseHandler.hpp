@@ -58,6 +58,7 @@ class responseHandler
 		std::string getExt (std::string const &path);
 		void getList();
 		void uniqueName(std::string &flName);
+		void runCgi();
 	public:
 		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);

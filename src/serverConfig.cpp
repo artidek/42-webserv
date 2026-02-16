@@ -55,6 +55,7 @@ serverConfig::serverConfig(void) {
 	errorPages[501] = "etc/error/501.html";
 	errorPages[502] = "etc/error/502.html";
 	cgiConf.cgiAllowed = "off";
+	cgiConf.root = "etc/cgi_bin";
 	cgiConf.extensions.push_back("php");
 	cgiConf.extensions.push_back("py");
 }

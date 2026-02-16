@@ -12,8 +12,10 @@ bool server::stop = false;
 bool server::stopped = true;
 int server::epollFd = -1;
 
-server::server(std::vector<serverConfig> const &conf) : configs(conf)
+server::server(std::vector<serverConfig> const &conf, char **env) : configs(conf)
 {
+	for (int i = 0; env[i]; i++)
+		envp.push_back(std::string(env[i]));
 }
 
 server::~server(void)
@@ -190,6 +192,11 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			{
 				pendingResponses[fd] = badResp;
 				armOut(fd);
+			}
+			else
+			{
+				shutdown(fd, SHUT_WR);
+				throw errorHandler(err);
 			}
 		}
 	}

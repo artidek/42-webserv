@@ -3,7 +3,7 @@
 #include "includes/server.hpp"
 #include <csignal>
 
-int main (int argc, char **argv)
+int main (int argc, char **argv, char **env)
 {
 	(void)argv;
 	if (argc > 2)
@@ -13,10 +13,11 @@ int main (int argc, char **argv)
 	}
 	if (argc == 1)
 	{
+		std::signal(SIGINT, server::handle_signal);
 		try
 		{
 			configParser::parseConfig("default.conf");
-			server srv(configParser::getConfigs());
+			server srv(configParser::getConfigs(), env);
 			srv.set();
 			srv.run();
 		}
@@ -31,9 +32,8 @@ int main (int argc, char **argv)
 		try
 		{
 			configParser::parseConfig(argv[1]);
-			server srv(configParser::getConfigs());
+			server srv(configParser::getConfigs(), env);
 			srv.set();
-			std::signal(SIGINT, server::handle_signal);
 			srv.run();
 		}
 		catch(const std::exception& e)

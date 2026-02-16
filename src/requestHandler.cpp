@@ -115,7 +115,7 @@ void requestHandler::tokenize(void)
 	std::string token;
 	while (std::getline(ss, token, '\n'))
 	{
-		if (token[token.size() - 1] == '\r' && token.size() > 1)
+		if (!token.empty() && token[token.size() - 1] == '\r' && token.size() > 1)
 			token = token.substr(0, token.size() - 1);
 		if (!token.empty())
 			_tokens.push(token);
@@ -233,7 +233,7 @@ void requestHandler::checkTimeout(int fd)
 	std::time_t now = std::time(NULL);
 	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
 	int reqTimeout = _host.getHost().hostTimeout;
-	if (now - res->second >= reqTimeout)
+	if (res != timeLog.end() && now - res->second >= reqTimeout)
 	{
 		timeLog.erase(fd);
 		throw errorHandler("Request Timeout");
@@ -266,7 +266,7 @@ bool requestHandler::requestComplete(void)
 			catch(const std::exception& e)
 			{
 				std::string err(e.what());
-				throw errorHandler(FROM, "requestComplete " + err);
+				throw errorHandler(err);
 			}
 			return true;
 		}

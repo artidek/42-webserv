@@ -1,5 +1,5 @@
 CPP = c++
-CPPFLAGS = -std=c++98 -Wall -Wextra -Werror -g
+CPPFLAGS = -std=c++98 -Wall -Wextra -Werror
 
 SRCPATH = src/
 UTILSPATH = utils/
