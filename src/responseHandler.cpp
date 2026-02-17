@@ -91,12 +91,20 @@ t_response const responseHandler::getResponceData(void) const
 
 void responseHandler::allowedMethod(std::string const &root)
 {
-	t_location loc = conf.getLocations()[root];
-	std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.getReqData().method);
-	if (res == loc.methods.end())
+	try
 	{
-		resp.respCode = 405;
-		throw errorHandler(resp.respCodes[405]);
+		t_location loc = conf.getLocation(root);
+		std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.getReqData().method);
+		if (res == loc.methods.end())
+		{
+			resp.respCode = 405;
+			throw errorHandler(resp.respCodes[405]);
+		}
+	}
+	catch(const std::exception& e)
+	{
+		resp.respCode = 500;
+		throw errorHandler(resp.respCodes[500]);
 	}
 }
 
@@ -140,7 +148,7 @@ void responseHandler::runGet(void)
 	try
 	{
 		t_location location = conf.getLocation(route.newRoot);
-		if (path.substr(path.size() - 4) == "none")
+		if (checkNone(path))
 		{
 			if (location.enableListing)
 				getList();
@@ -175,7 +183,7 @@ void responseHandler::runPost(void)
 {
 	try
 	{
-		if (path.substr(path.size() - 4) == "none")
+		if (checkNone(path))
 		{
 			if (conf.getLocation(route.newRoot).enableUpload)
 			{
@@ -285,10 +293,9 @@ void responseHandler::createResponce(std::vector<std::string> env)
 		}
 		else
 		{
+			path = configUtils::buildPath(route.newRoot,route.page);
 			if (!request.getReqData().page.empty())
 				path = configUtils::buildPath(route.newRoot, request.getReqData().page);
-			else
-				path = configUtils::buildPath(route.newRoot,route.page);
 		}
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
@@ -380,42 +387,10 @@ bool responseHandler::responseComplete(void) {return sendComplete;}
 
 bool responseHandler::isCgi()
 {
-	try
-	{
-		t_cgi configs = conf.getCgiConf();
-		std::string ext = getExt(path);
-		std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
-		if (res != configs.extensions.end() && route.newRoot == configs.root)
-		{
-			if (configs.cgiAllowed)
-			{
-				if (access(path.c_str(), X_OK) == 0)
-					return true;
-				else
-				{
-					resp.respCode = 403;
-					throw errorHandler(resp.respCodes[403]);
-				}
-			}
-			else
-			{
-				resp.respCode = 403;
-				throw errorHandler(resp.respCodes[403]);
-			}
-		}
-		else if (res == configs.extensions.end() && route.newRoot != configs.root)
-			return false;
-		else
-		{
-			resp.respCode = 500;
-			throw errorHandler(resp.respCodes[500]);
-		}
-	}
-	catch(const std::exception& e)
-	{
+	t_cgi cgiConf = conf.getCgiConf();
+	if (cgiConf.root != route.newRoot)
 		return false;
-	}
-	return false;
+	return true;
 }
 
 void responseHandler::fillHeaders(std::string connection, std::string contLen)
@@ -519,4 +494,12 @@ void responseHandler::runCgi(std::vector<std::string> env)
 {
 	(void)env;
 	//cgi execution goes here
+}
+
+bool responseHandler::checkNone(std::string const &path)
+{
+	std::string none = path.substr(path.size() - 4);
+	if (none != "none")
+		return false;
+	return true;
 }

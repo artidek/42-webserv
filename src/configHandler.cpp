@@ -264,6 +264,11 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 			cgi.root = prop;
 			count++;
 		}
+		else if (propName == "default_cgi")
+		{
+			cgi.defaultCgi = prop;
+			count++;
+		}
 		else if (propName == "cgi_extensions")
 		{
 			configUtils::getFromList(cgi, blockTokens);

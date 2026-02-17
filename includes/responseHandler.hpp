@@ -59,6 +59,7 @@ class responseHandler
 		void getList();
 		void uniqueName(std::string &flName);
 		void runCgi(std::vector<std::string>env);
+		bool checkNone(std::string const &path);
 	public:
 		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);

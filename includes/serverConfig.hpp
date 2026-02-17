@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/06 21:09:28 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/16 20:26:28 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,7 @@ typedef struct s_cgi
 {
 	bool cgiAllowed;
 	std::string root;
+	std::string defaultCgi;
 	std::vector<std::string> extensions;
 } t_cgi;
 
