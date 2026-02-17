@@ -194,10 +194,13 @@ void responseHandler::runPost(void)
 				if (path[path.size() - 1] != '/')
 					path += '/';
 				path += filename;
-				std::fstream file(path.c_str(), std::ios::out | std::ios::binary);
-				file.write(request.getReqData().body.content.c_str(), request.getReqData().body.content.size());
-				file.close();
-				fillResponseBody("etc/error/success.html");
+				if (allowedExt(filename, true))
+				{
+					std::fstream file(path.c_str(), std::ios::out | std::ios::binary);
+					file.write(request.getReqData().body.content.c_str(), request.getReqData().body.content.size());
+					file.close();
+					fillResponseBody("etc/error/success.html");
+				}
 			}
 			else
 			{
@@ -278,7 +281,7 @@ void responseHandler::isMethod(std::string &mtd)
 	}
 }
 
-void responseHandler::createResponce(std::vector<std::string> env)
+void responseHandler::createResponce(std::vector<std::string> const &envp)
 {
 	std::string method;
 	try
@@ -300,7 +303,7 @@ void responseHandler::createResponce(std::vector<std::string> env)
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
 		if (isCgi())
-			runCgi(env);
+			runCgi(envp);
 		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
@@ -388,6 +391,7 @@ bool responseHandler::responseComplete(void) {return sendComplete;}
 bool responseHandler::isCgi()
 {
 	t_cgi cgiConf = conf.getCgiConf();
+	//add slash to the end if not in root or new_root
 	if (cgiConf.root != route.newRoot)
 		return false;
 	return true;
@@ -423,14 +427,26 @@ void responseHandler::getList()
 	ss << "<html><head><title>Index of " << request.getReqData().route << " </title></head><body>\n";
 	ss << "<h1>Index of " << request.getReqData().route << "</h1>\n";
 	ss << "<ul>\n";
-	DIR *dir = opendir(route.newRoot.c_str());
+	std::string path = route.newRoot;
+	DIR *dir = opendir(path.c_str());
 	struct dirent *entry;
 	while ((entry = readdir(dir)) != NULL)
 	{
+		path = route.newRoot;
 		std::string name(entry->d_name);
 		if (name == ".." || name == ".")
 			continue;
-		ss << "<li><a href=" << request.getReqData().route << "/" << name << ">" << name << "</a></li>\n";
+		struct stat info;
+		if (path[path.size() - 1] == '/')
+			path += "/";
+		path += name;
+		if (isDir(&info, path))
+			continue;
+		if (S_ISREG(info.st_mode))
+		{
+			if (allowedExt(name, false))
+				ss << "<li>" << name << "</li>\n";
+		}
 	}
 	ss << "</ul>\n";
 	ss << "</body></html>\n";
@@ -502,4 +518,44 @@ bool responseHandler::checkNone(std::string const &path)
 	if (none != "none")
 		return false;
 	return true;
+}
+
+bool responseHandler::isDir(struct stat *info, std::string const &fullPath)
+{
+	if(stat(fullPath.c_str(), info) == -1)
+		return true;
+	if (S_ISDIR(info->st_mode))
+		return true;
+	return false;
+}
+
+bool responseHandler::allowedExt(std::string const &name, bool upload)
+{
+	size_t found = name.find_last_of(".");
+	std::string ext;
+	if (found != std::string::npos)
+		ext = name.substr(found + 1);
+	else
+		return false;
+	if (!upload)
+	{
+		std::vector<std::string> exts = conf.getLocation(route.newRoot).listExt;
+		std::vector<std::string>::iterator res = find(exts.begin(), exts.end(), ext);
+		if (res != exts.end())
+			return true;
+	}
+	else
+	{
+		std::vector<std::string> exts = conf.getLocation(route.newRoot).uploadExt;
+		std::vector<std::string>::iterator res = find(exts.begin(), exts.end(), ext);
+		if (res == exts.end())
+		{
+			resp.respCode = 403;
+			throw errorHandler(resp.respCodes[403]);
+		}
+		else
+			return true;
+	}
+	return false;
+	
 }

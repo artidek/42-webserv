@@ -83,11 +83,6 @@ void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 				fillPorts(newHost, blockTokens);
 				count++;
 			}
-			else if (propName == "default_page")
-			{
-				newHost.page = prop;
-				count++;
-			}
 			else if (propName == "max_request_body")
 			{
 				setMaxReqBody(newHost, prop);
@@ -98,18 +93,11 @@ void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 				setTimeout(newHost, prop);
 				count++;
 			}
-			else if (propName == "default_root")
-			{
-				configUtils::ifDir(prop);
-				newHost.root = prop;
-				count++;
-			}
 			else
 				throw errorHandler(INVALID_INSTRUCTION, propName);
 		}
-		if (count < 6)
+		if (count < 4)
 			throw errorHandler(MISSING_PROPERTY, " host config");
-		configUtils::ifPage(newHost.root, newHost.page);
 	}
 	catch (const std::exception &e)
 	{
@@ -228,13 +216,29 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 					configUtils::getFromList(loc, blockTokens);
 				count++;
 			}
+			else if (propName == "list_ext")
+			{
+				if (prop == "none")
+					loc.listExt.push_back(prop);
+				else
+					configUtils::getFromList(loc.listExt, blockTokens);
+				count++;
+			}
+			else if (propName == "upload_ext")
+			{
+				if (prop == "none")
+					loc.uploadExt.push_back(prop);
+				else
+					configUtils::getFromList(loc.uploadExt, blockTokens);
+				count++;
+			}
 		}
 	}
 	catch (const std::exception &e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (count < 3)
+	if (count < 5)
 		throw errorHandler(MISSING_PROPERTY, " location");
 	if (key[key.size() - 1] != '/')
 		key += "/";
@@ -277,7 +281,7 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 		else
 			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
-	if (count < 3)
+	if (count < 4)
 		throw errorHandler(MISSING_PROPERTY, " cgi config");
 }
 

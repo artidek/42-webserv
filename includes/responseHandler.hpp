@@ -60,13 +60,15 @@ class responseHandler
 		void uniqueName(std::string &flName);
 		void runCgi(std::vector<std::string>env);
 		bool checkNone(std::string const &path);
+		bool isDir(struct stat *info, std::string const &fullPath);
+		bool allowedExt(std::string const &name, bool upload);
 	public:
 		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
 		~responseHandler(void);
-		void createResponce(std::vector<std::string> env);
+		void createResponce(std::vector<std::string> const &envp);
 		void sendResponse(int const &fd);
 		void sendToClient(int const &fd);
 		t_response const getResponceData(void) const;

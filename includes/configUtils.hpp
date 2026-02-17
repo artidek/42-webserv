@@ -34,6 +34,7 @@ class configUtils
 		static bool getFromStack(std::string &s, std::stack<std::string> &blockNames);
 		static void getFromList(t_location &loc, std::stack<std::string> &blockTokens);
 		static void getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens);
+		static void getFromList(std::vector<std::string> &list, std::stack<std::string> &blockTokens);
 		static bool onOff(std::string const &prop);
 		static void ifPage(std::string const &path, std::string const &page);
 		static std::string trim (std::string const &src, std::string const & set);

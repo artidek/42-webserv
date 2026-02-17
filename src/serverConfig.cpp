@@ -4,12 +4,13 @@
 #include <algorithm>
 #include <unistd.h>
 #include "../includes/configUtils.hpp"
+#include <iostream>
 
 const std::map<std::string, std::string> serverConfig::env = serverConfig::makeEnv();
 
 bool s_host::empty(void)
 {
-	if (addr.empty() && ports.empty() && page.empty() && root.empty() && maxReqBody == 0 && hostTimeout == 0)
+	if (addr.empty() && ports.empty() && maxReqBody == 0 && hostTimeout == 0)
 		return true;
 	return false;
 }
@@ -27,6 +28,27 @@ bool s_location::empty(void)
 	if (methods.empty())
 		return true;
 	return false;
+}
+
+bool s_cgi::empty(void)
+{
+	if (defaultCgi.empty())
+		return true;
+	return false;
+}
+
+s_cgi& s_cgi::operator=(s_cgi const &copy)
+{
+	if (this != &copy)
+	{
+		this->cgiAllowed = copy.cgiAllowed;
+		this->defaultCgi = copy.defaultCgi;
+		this->root = copy.root;
+		this->extensions.clear();
+		for (size_t i = 0; i < copy.extensions.size(); i++)
+			this->extensions.push_back(copy.extensions[i]);
+	}
+	return *this;
 }
 
 std::map<std::string, std::string> serverConfig::makeEnv(void)

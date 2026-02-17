@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <ctime>
 #include <cstring>
+#include <iostream>
 
 const char * t_dayMonth::days[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const char * t_dayMonth::months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -163,6 +164,28 @@ void	configUtils::getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens)
 				setter.c_str());
 		if (res == cgi.extensions.end())
 			cgi.extensions.push_back(setter);
+		blockTokens.pop();
+	}
+}
+
+void configUtils::getFromList(std::vector<std::string> &list, std::stack<std::string> &blockTokens)
+{
+	std::string setter;
+	while (!blockTokens.empty())
+	{
+		setter = blockTokens.top();
+		if (setter == "]")
+		{
+			blockTokens.pop();
+			return ;
+		}
+		if (setter[setter.size() - 1] == ',')
+			setter = setter.substr(0, setter.size() - 1);
+		std::vector<std::string>::iterator res;
+		res = std::find(list.begin(), list.end(),
+				setter.c_str());
+		if (res == list.end())
+			list.push_back(setter);
 		blockTokens.pop();
 	}
 }

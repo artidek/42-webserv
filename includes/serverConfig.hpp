@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/16 20:26:28 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/17 17:29:06 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,8 +32,6 @@ typedef struct s_host
 {
 	std::string addr;
 	std::vector<std::string> ports;
-	std::string page;
-	std::string root;
 	int maxReqBody;
 	timeout_t hostTimeout;
 	bool empty();
@@ -53,6 +51,8 @@ typedef struct s_cgi
 	std::string root;
 	std::string defaultCgi;
 	std::vector<std::string> extensions;
+	s_cgi &operator=(s_cgi const &copy);
+	bool empty();
 } t_cgi;
 
 typedef struct s_location
@@ -60,6 +60,8 @@ typedef struct s_location
 	bool enableListing;
 	bool enableUpload;
 	std::vector<std::string> methods;
+	std::vector<std::string> listExt;
+	std::vector<std::string> uploadExt;
 	bool empty();
 }	t_location;
 

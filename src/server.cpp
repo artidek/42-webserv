@@ -104,7 +104,6 @@ void server::setNonBlocking(int &fd)
 void server::set()
 {
 	std::map<std::string, serverConfig>::iterator it;
-
 	try
 	{
 		for (size_t i = 0; i < configs.size(); i++)
