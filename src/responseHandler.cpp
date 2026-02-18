@@ -6,7 +6,6 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <cstdio>
 
@@ -198,16 +197,50 @@ void responseHandler::runPost(void)
 				throw errorHandler(resp.respCodes[403]);
 			}
 		}
-		if (isCgi())
-		{
-			cgi = true;
-			//cgi handler goes here
-		}
+		// if (isCgi())
+		// {
+		cgi = true;
+		runCgi();
+		// }
 	}
 	catch(const std::exception& e)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
+}
+
+void responseHandler::runCgi()
+{
+	cgiHandler cgi(conf, request.getReqData());
+	try 
+	{
+		std::string page = cgi.getPage(route);
+		std::string filePath = configUtils::buildPath(route.newRoot, page);
+		if (!cgi.isCgiAllowed() || !cgi.checkPageExtension(page) || !cgi.fileExist(filePath))
+		{
+			resp.respCode = 405;
+			throw errorHandler(resp.respCodes[405]);
+		}
+		cgi.setEnv(filePath);
+		cgi.run(filePath);
+		if (!cgi.isSuccess())
+		{
+			resp.respCode = 500;
+			throw errorHandler(resp.respCodes[500]);
+		}
+	}
+	catch(const std::exception &e)
+	{
+		throw errorHandler(std::string(e.what()));
+	}
+}
+
+bool responseHandler::isCgi()
+{
+	t_cgi cgiConf = conf.getCgiConf();
+	if (cgiConf.root != route.newRoot)
+		return false;
+	return true;
 }
 
 void responseHandler::runHead(void)
@@ -398,46 +431,6 @@ int  responseHandler::getRespCode(void) const {return resp.respCode;}
 
 bool responseHandler::responseComplete(void) {return sendComplete;}
 
-bool responseHandler::isCgi()
-{
-	try
-	{
-		t_cgi configs = conf.getCgiConf();
-		std::string ext = getExt(path);
-		std::vector<std::string>::iterator res = std::find(configs.extensions.begin(), configs.extensions.end(), ext);
-		if (res != configs.extensions.end() && route.newRoot == configs.root)
-		{
-			if (configs.cgiAllowed)
-			{
-				if (access(path.c_str(), X_OK) == 0)
-					return true;
-				else
-				{
-					resp.respCode = 403;
-					throw errorHandler(resp.respCodes[403]);
-				}
-			}
-			else
-			{
-				resp.respCode = 403;
-				throw errorHandler(resp.respCodes[403]);
-			}
-		}
-		else if (res == configs.extensions.end() && route.newRoot != configs.root)
-			return false;
-		else
-		{
-			resp.respCode = 500;
-			throw errorHandler(resp.respCodes[500]);
-		}
-	}
-	catch(const std::exception& e)
-	{
-		return false;
-	}
-	return false;
-}
-
 void responseHandler::fillHeaders(std::string connection, std::string contLen)
 {
 	resp.headers["Server:"] = SRV;
@@ -534,3 +527,5 @@ size_t responseHandler::getTotal() const {return total;}
 std::string const responseHandler::getBuffer() const {return buffer;}
 
 bool responseHandler::getComplete() const {return sendComplete;}
+
+

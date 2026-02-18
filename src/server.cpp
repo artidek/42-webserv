@@ -239,6 +239,9 @@ void server::handleClientData(int const &fd)
 				handleRequest(fd, res->second, req);
 				if (req.requestComplete())
 				{
+					// std::cout <<req.getRawData()<< std::endl;
+					std::cout << req << std::endl;
+					std::cout << "|------------------------------------|" << std::endl;
 					req.removeFromTimeLog(fd);
 					pendingRequests.erase(fd);
 					req.parse();

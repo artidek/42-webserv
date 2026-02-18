@@ -4,6 +4,8 @@
 #define RESPONSE_HANDLER_H
 
 #include "serverConfig.hpp"
+#include "cgiHandler.hpp"
+#include <unistd.h>
 
 #define SRV_NM "Server:"
 #define DT "Date:"
@@ -58,6 +60,7 @@ class responseHandler
 		std::string getExt (std::string const &path);
 		void getList();
 		void uniqueName(std::string &flName);
+		void runCgi();
 	public:
 		responseHandler ();
 		responseHandler(serverConfig const &config, requestHandler const &req);
