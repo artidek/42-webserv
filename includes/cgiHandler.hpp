@@ -17,15 +17,15 @@ class cgiHandler
 		t_request	request;
 		std::string sendBuff;
 		std::vector<std::string> env;
-		std::vector<char*> envp;
+		const char **envp;
 		bool success;
 		// cgiHandler(cgiHandler const &copy);
 		// cgiHandler &operator=(cgiHandler const &copy);
-		// void checkSuccess(void);
+		void execScrypt(std::string const &path);
 	public:
 		cgiHandler(serverConfig const &conf, t_request const &req);
 		~cgiHandler();
-		// std::string const &getSendBuff(void) const;
+		std::string const &getSendBuff(void) const;
 		void run(std::string const &path);
 		bool isSuccess(void) const;
 		bool isCgiAllowed() const;

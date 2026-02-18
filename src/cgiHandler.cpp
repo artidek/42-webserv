@@ -21,10 +21,11 @@ void cgiHandler::setEnv(std::string const &page)
 
 void cgiHandler::prepareEnvp(void)
 {
-	envp.clear();
+	char **temp = new char*[env.size() + 1];
 	for (size_t i = 0; i < env.size(); ++i)
-		envp.push_back(const_cast<char*>(env[i].c_str()));
-	envp.push_back(NULL);
+		temp[i] = const_cast<char*>(env[i].c_str());
+	temp[env.size()] = NULL;
+	envp = const_cast<const char**>(temp);
 }
 
 bool cgiHandler::isCgiAllowed() const
@@ -59,7 +60,7 @@ bool cgiHandler::checkPageExtension(std::string const &page) const
 
 bool cgiHandler::fileExist(std::string const &path) const
 {
-	if (access(path.c_str(), F_OK) == 0)
+	if (access(path.c_str(), F_OK | X_OK) == 0)
 		return true;
 	return false;
 }
@@ -68,19 +69,17 @@ void cgiHandler::run(std::string const &path)
 {
     int pipe_to_child[2];
     int pipe_from_child[2];
-    if (pipe(pipe_to_child) < 0) {
-        throw errorHandler("Error creating pipe_to_child");
+    if (pipe(pipe_to_child) < 0)
         return;
-    }
-    if (pipe(pipe_from_child) < 0) {
-        throw errorHandler("Error creating pipe_from_child");
+    if (pipe(pipe_from_child) < 0)
+    {
         close(pipe_to_child[0]);
         close(pipe_to_child[1]);
         return;
     }
     pid_t pid = fork();
-    if (pid < 0) {
-        throw errorHandler("Error forking process");
+    if (pid < 0)
+    {
         close(pipe_to_child[0]);
         close(pipe_to_child[1]);
         close(pipe_from_child[0]);
@@ -95,13 +94,7 @@ void cgiHandler::run(std::string const &path)
         close(pipe_from_child[0]);
         dup2(pipe_from_child[1], STDOUT_FILENO);
         close(pipe_from_child[1]);
-        std::string ext = path.substr(path.rfind(".") + 1);
-        if (ext == "py")
-            execl("/usr/bin/python3", "python3", path.c_str(), NULL);
-        else if (ext == "php")
-            execl("/usr/bin/php", "php", path.c_str(), NULL);
-        else if (ext == "cgi")
-            execl(path.c_str(), path.c_str(), NULL);
+        execScrypt(path);
         exit(1);
     } 
     else 
@@ -109,27 +102,31 @@ void cgiHandler::run(std::string const &path)
         close(pipe_to_child[0]);
         close(pipe_from_child[1]);
         std::string input_data = request.body.content;
-        write(pipe_to_child[1], input_data.c_str(), input_data.length());
+        if (!input_data.empty())
+            write(pipe_to_child[1], input_data.c_str(), input_data.length());
         close(pipe_to_child[1]);
         char buffer[4096];
         ssize_t bytes_read;
-        std::string output;
         while ((bytes_read = read(pipe_from_child[0], buffer, sizeof(buffer) - 1)) > 0)
-        {
-            buffer[bytes_read] = '\0';
-            output += buffer;
-        }
+            sendBuff.append(buffer, bytes_read);
         close(pipe_from_child[0]);
         int status;
         waitpid(pid, &status, 0);
-        if (status == 0 && !output.empty())
-        {
+        if (status == 0 && !sendBuff.empty())
             success = true;
-            sendBuff = output;
-        }
     }
 }
 
 bool cgiHandler::isSuccess(void) const {return success;}
 
 std::string const &cgiHandler::getSendBuff(void) const {return sendBuff;}
+
+void cgiHandler::execScrypt(std::string const &path)
+{
+    std::string ext = path.substr(path.rfind(".") + 1);
+    char *argv[2];
+    argv[0] = const_cast<char*>(path.c_str());
+    argv[1] = NULL;
+    prepareEnvp();
+    execve(path.c_str(), argv, const_cast<char**>(envp));
+}

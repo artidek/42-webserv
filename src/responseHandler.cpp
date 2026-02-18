@@ -212,27 +212,26 @@ void responseHandler::runPost(void)
 void responseHandler::runCgi()
 {
 	cgiHandler cgi(conf, request.getReqData());
-	try 
+	std::string page = cgi.getPage(route);
+	std::string filePath = configUtils::buildPath(route.newRoot, page);
+	if (!cgi.isCgiAllowed() || !cgi.checkPageExtension(page))
 	{
-		std::string page = cgi.getPage(route);
-		std::string filePath = configUtils::buildPath(route.newRoot, page);
-		if (!cgi.isCgiAllowed() || !cgi.checkPageExtension(page) || !cgi.fileExist(filePath))
-		{
-			resp.respCode = 405;
-			throw errorHandler(resp.respCodes[405]);
-		}
-		cgi.setEnv(filePath);
-		cgi.run(filePath);
-		if (!cgi.isSuccess())
-		{
-			resp.respCode = 500;
-			throw errorHandler(resp.respCodes[500]);
-		}
+		resp.respCode = 403;
+		throw errorHandler(resp.respCodes[403]);
 	}
-	catch(const std::exception &e)
+	if (!cgi.fileExist(filePath))
 	{
-		throw errorHandler(std::string(e.what()));
+		resp.respCode = 404;
+		throw errorHandler(resp.respCodes[404]);
 	}
+	cgi.setEnv(filePath);
+	cgi.run(filePath);
+	if (!cgi.isSuccess())
+	{
+		resp.respCode = 500;
+		throw errorHandler(resp.respCodes[500]);
+	}
+	std::cout << "CGI output:\n" << cgi.getSendBuff() << std::endl;
 }
 
 bool responseHandler::isCgi()
