@@ -8,7 +8,7 @@
 #include <ctime>
 
 
-#define BUFFER_SIZE  8192
+#define BUFFER_SIZE  65536
 
 class responseHandler;
 typedef struct s_reqBody
@@ -41,8 +41,9 @@ class requestHandler
 		static std::map<std::string, std::string> _headers;
 		t_request _request;
 		size_t _contLen;
+		size_t _totalSize;
 		static std::map<std::string, std::string> initHeaders(void);
-		std::vector<std::vector<char> > buffChunks;
+		std::vector<char> buffChunks;
 		void tokenize(void);
 		void fillHeader(std::string headerProp, std::string headerVal);
 		void fillReqBody();
@@ -79,7 +80,8 @@ class requestHandler
 		int getReadLen() const;
 		bool getIsheader() const;
 		std::string const getReadHeader() const;
-		std::vector<std::vector<char> > const getBufChunks() const;
+		std::vector<char> const getBufChunks() const;
+		size_t getTotalSize() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

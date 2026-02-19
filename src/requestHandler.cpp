@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <iostream>
 #include <unistd.h>
+#include <cstring>
 
 std::map<int, std::time_t>requestHandler::timeLog;
 std::map<std::string, std::string> requestHandler::_headers = initHeaders();
@@ -31,7 +32,7 @@ bool t_reqBody::empty(void)
 	return false;
 }
 
-requestHandler::requestHandler(serverConfig const &conf) : _readLen(0), _host(conf), _contLen(0), _isHeader(false) {}
+requestHandler::requestHandler(serverConfig const &conf) : _readLen(0), _host(conf), _contLen(0), _totalSize(0), _isHeader(false) {}
 
 requestHandler::requestHandler(void) {}
 
@@ -49,6 +50,7 @@ requestHandler::requestHandler(requestHandler const &copy)
 	_isHeader = copy.getIsheader();
 	_readHeaders = copy.getReadHeader();
 	buffChunks = copy.getBufChunks();
+	_totalSize = copy.getTotalSize();
 }
 
 requestHandler &requestHandler::operator=(requestHandler const &copy)
@@ -63,6 +65,7 @@ requestHandler &requestHandler::operator=(requestHandler const &copy)
 	_isHeader = copy.getIsheader();
 	_readHeaders = copy.getReadHeader();
 	buffChunks = copy.getBufChunks();
+	_totalSize = copy.getTotalSize();
 	return *this;
 }
 
@@ -71,15 +74,17 @@ std::string const &requestHandler::getRawData(void) const { return _rawData; }
 void requestHandler::read(int const &fd)
 {
 	int readBytes = 0;
+	buffChunks.resize(BUFFER_SIZE);
 	while(true)
 	{
-		char buffer[BUFFER_SIZE + 1];
-		readBytes = recv(fd, buffer, sizeof(buffer),0);
+		if (buffChunks.size() < _totalSize)
+			buffChunks.resize(_totalSize);
+		readBytes = recv(fd, &buffChunks[_readLen], buffChunks.size() - _readLen,0);
 		if (readBytes > 0)
 		{
-			std::vector<char>chunk(buffer, buffer + readBytes);
-			buffChunks.push_back(chunk);
 			_readLen += readBytes;
+			if (_totalSize == 0)
+				_totalSize += _readLen;
 		}
 		else if (readBytes == 0)
 			throw errorHandler("Client closed connection");
@@ -93,8 +98,6 @@ void requestHandler::read(int const &fd)
 				throw errorHandler("Reading error");
 		}
 	}
-	if (_readLen > _host.getHost().maxReqBody)
-		throw errorHandler("Request Entity Too Large");
 	checkTimeout(fd);
 }
 
@@ -363,14 +366,8 @@ bool requestHandler::doneReading()
 
 std::string requestHandler::combine()
 {
-	size_t totalSize = 0;
-    std::vector<std::vector<char> >::const_iterator it;
-    for (it = buffChunks.begin(); it !=  buffChunks.end(); ++it)
-        totalSize += it->size();
-    std::string full;
-    full.reserve(totalSize);
-    for (it =  buffChunks.begin(); it !=  buffChunks.end(); ++it)
-        full.append(&(*it)[0], it->size());
+	std::string full;
+	full.append(&buffChunks[0], _totalSize);
     return full;
 }
 
@@ -384,6 +381,10 @@ void requestHandler::isHeaders()
 		fillMethodRoute(combined);
 		_readHeaders = combined.substr(0, found);
 		setContLen();
+		if (_contLen > 0)
+			_totalSize += _contLen;
+		// if (_contLen > static_cast<size_t>(_host.getHost().maxReqBody))
+		// 	throw errorHandler("Request Entity Too Large");
 		_isHeader = true;
 	}
 }
@@ -394,4 +395,6 @@ bool requestHandler::getIsheader() const {return _isHeader;}
 
 std::string const requestHandler::getReadHeader() const {return _readHeaders;}
 
-std::vector<std::vector<char> > const requestHandler::getBufChunks() const {return buffChunks;}
+std::vector<char> const requestHandler::getBufChunks() const {return buffChunks;}
+
+size_t requestHandler::getTotalSize() const {return _totalSize;}

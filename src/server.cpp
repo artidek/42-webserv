@@ -177,7 +177,7 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 	{
 		std::string err(e.what());
 		//bad request should be handled with err response and closing connection
-		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error" || err == "Request Entity Too Large")
+		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
 		{
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
@@ -226,16 +226,17 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 				pendingResponses[fd] = resp;
 				armOut(fd);
 			}
+			else
+				throw errorHandler(err);
 		}
 	}
-	closeConSock(fd);
 }
 
 void server::handleClientData(int const &fd)
 {
 	std::map<int, serverConfig>::iterator res;
 	res = fdToHost.find(fd);
-	requestHandler req;
+	requestHandler  req;
 	if (res != fdToHost.end())
 	{
 		try
@@ -269,6 +270,18 @@ void server::handleClientData(int const &fd)
 		}
 		catch(const std::exception& e)
 		{
+			std::string err(e.what());
+			if (err == "Request Entity Too Large")
+			{
+				responseHandler badResp;
+				badResp.sendBad(413, fd);
+				if (!badResp.responseComplete())
+				{
+					pendingResponses[fd] = badResp;
+					armOut(fd);
+					return;
+				}
+			}
 			closeConSock(fd);
 		}
 	}
