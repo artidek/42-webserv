@@ -93,6 +93,8 @@ void requestHandler::read(int const &fd)
 				throw errorHandler("Reading error");
 		}
 	}
+	if (_readLen > _host.getHost().maxReqBody)
+		throw errorHandler("Request Entity Too Large");
 	checkTimeout(fd);
 }
 
@@ -265,8 +267,7 @@ bool requestHandler::requestComplete(void)
 			}
 			catch(const std::exception& e)
 			{
-				std::string err(e.what());
-				throw errorHandler(err);
+				throw errorHandler("Bad Request");
 			}
 			return true;
 		}

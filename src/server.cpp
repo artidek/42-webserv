@@ -177,11 +177,11 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 	{
 		std::string err(e.what());
 		//bad request should be handled with err response and closing connection
-		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error" || err == "Not Found")
+		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error" || err == "Request Entity Too Large")
 		{
 			rH.removeFromTimeLog(fd);
 			pendingRequests.erase(fd);
-			responseHandler badResp(rH.getConfig(), rH);
+			responseHandler badResp;
 			int rc = badResp.findRespCode(err);
 			if (rc > 0)
 				badResp.sendBad(rc, fd);
@@ -194,7 +194,6 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 			}
 			else
 			{
-				shutdown(fd, SHUT_WR);
 				throw errorHandler(err);
 			}
 		}
@@ -229,6 +228,7 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 			}
 		}
 	}
+	closeConSock(fd);
 }
 
 void server::handleClientData(int const &fd)
@@ -256,7 +256,7 @@ void server::handleClientData(int const &fd)
 			if (event.events & EPOLLOUT)
 			{
 				std::map<int, responseHandler>::iterator resResp = pendingResponses.find(fd);
-				responseHandler resp = resResp->second;
+				responseHandler &resp = resResp->second;
 				resp.sendToClient(fd);
 				if (resp.responseComplete())
 				{
@@ -264,8 +264,6 @@ void server::handleClientData(int const &fd)
 					closeConSock(fd);
 					pendingResponses.erase(fd);
 				}
-				else
-					pendingResponses[fd] = resp;
 			}
 			
 		}
@@ -334,6 +332,8 @@ void server::run()
 void server::closeConSock(int const &fd)
 {
 	epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+	if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
+		std::cout << "epoll_ctl_del failed";
 	close(fd);
 	fdToHost.erase(fd);
 }

@@ -47,6 +47,7 @@ class server
 		void stopServer();
 		void armOut(int fd);
 		void disarmOut(int fd);
+		bool badResponse(int fd, std::string  const &err);
 	public:
 		server(std::vector<serverConfig> const &conf, char **env);
 		~server(void);
@@ -56,3 +57,4 @@ class server
 };
 
 #endif	
+ 

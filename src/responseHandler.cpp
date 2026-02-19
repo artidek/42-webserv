@@ -27,7 +27,7 @@ s_response::s_response(void)
 	respCodes[404] = "Not Found";
 	respCodes[405] = "Method Not Allowed";
 	respCodes[408] = "Request Timeout";
-	respCodes[413] = "Request To Large";
+	respCodes[413] = "Request Entity Too Large";
 	respCodes[500] = "Internal Server Error";
 	respCodes[501] = "Not Implemented";
 	respCodes[502] = "Bad Gateway";
@@ -46,7 +46,10 @@ responseHandler::responseHandler(serverConfig const &config, requestHandler cons
 	cgi = false;
 }
 
-responseHandler::responseHandler(){};
+responseHandler::responseHandler() : sendComplete(false), size(0), total(0)
+{
+
+}
 
 responseHandler::responseHandler(responseHandler const & copy)
 {
@@ -54,6 +57,7 @@ responseHandler::responseHandler(responseHandler const & copy)
 	total = copy.getTotal();
 	buffer = copy.getBuffer();
 	sendComplete = copy.getComplete();
+	resp.respCode = copy.getResponceData().respCode;
 }
 
 responseHandler &responseHandler::operator=(responseHandler const &copy)
@@ -62,6 +66,7 @@ responseHandler &responseHandler::operator=(responseHandler const &copy)
 	total = copy.getTotal();
 	buffer = copy.getBuffer();
 	sendComplete = copy.getComplete();
+	resp.respCode = copy.getResponceData().respCode;
 	return *this;
 }
 
@@ -118,8 +123,7 @@ void responseHandler::isRoute(t_route &route)
 	catch(const std::exception& e)
 	{
 		resp.respCode = 404;
-		std::string err(e.what());
-		throw errorHandler(FROM, "isRoute" + err);
+		throw errorHandler(resp.respCodes[404]);
 	}
 
 }
@@ -340,12 +344,10 @@ void responseHandler::sendToClient(int const &fd)
 		{
 			if (errno == EINTR) continue;
 			else if (errno == EAGAIN || errno == EWOULDBLOCK)
-				break;
+				return;
 			else
 				throw errorHandler("Send failed");
 		}
-		if (writeBytes == 0)
-			throw errorHandler("Peer closed");
 		total += writeBytes;
 	}
 	if (size == total)
@@ -371,15 +373,12 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 	resp.respCode = respCode;
 	resp.headers["Date:"] = configUtils::getDateTime();
 	resp.headers["Connection:"] = "close";
-	if (respCode != 408 && respCode != 413)
-	{
-		std::stringstream ss;
-		fillResponseBody(conf.getErrorPage(respCode));
-		ss << resp.body.size();
-		ss >> resp.headers["Content-Length:"];
-	}
-	else
-		resp.headers["Content-Length:"] = "0";
+	fillResponseBody(conf.getErrorPage(respCode));
+	std::stringstream ss;
+	ss << resp.body.size();
+	std::string sz;
+	ss >> sz;
+	resp.headers["Content-Length:"] = sz;
 	fillSendBuffer();
 	sendToClient(fd);
 }
