@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/17 17:29:06 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/20 01:02:34 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,7 @@ typedef struct s_host
 	std::vector<std::string> ports;
 	int maxReqBody;
 	timeout_t hostTimeout;
+	std::string hostname;
 	bool empty();
 } t_host;
 
@@ -42,6 +43,8 @@ typedef struct s_route
 	std::string newRoot;
 	std::string page;
 	std::string response;
+	std::vector<std::string> methods;
+	std::string redirect;
 	bool empty();
 } t_route;
 
@@ -59,7 +62,6 @@ typedef struct s_location
 {
 	bool enableListing;
 	bool enableUpload;
-	std::vector<std::string> methods;
 	std::vector<std::string> listExt;
 	std::vector<std::string> uploadExt;
 	bool empty();

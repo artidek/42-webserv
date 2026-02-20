@@ -25,7 +25,7 @@ bool s_route::empty(void)
 
 bool s_location::empty(void)
 {
-	if (methods.empty())
+	if (listExt.empty() || uploadExt.empty())
 		return true;
 	return false;
 }

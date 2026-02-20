@@ -48,7 +48,7 @@ class responseHandler
 		void runDelete();
 		void isMethod(std::string &mtd);
 		void isRoute(t_route &route);
-		void allowedMethod(std::string const &root);
+		void allowedMethod();
 		void fillResponseBody(std::string const &filePath);
 		std::string eTag(std::string const &file);
 		void fillSendBuffer();

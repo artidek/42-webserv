@@ -49,10 +49,10 @@ void server::setAddrInfo(std::vector<addrinfo *> &infos, t_host const &host)
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 	std::vector<std::string> p = host.ports;
-	for (size_t i = 0; i < host.ports.size(); i++)
+	for (size_t i = 0; i < p.size(); i++)
 	{
 		res = NULL;
-		err = getaddrinfo(host.addr.c_str(), host.ports[i].c_str(), &hints,
+		err = getaddrinfo(host.addr.c_str(), p[i].c_str(), &hints,
 				&res);
 		if (err != 0)
 			throw errorHandler(FAILED_MAP_ADDR, std::string(gai_strerror(err)));

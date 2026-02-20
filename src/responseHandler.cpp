@@ -94,13 +94,14 @@ t_response const responseHandler::getResponceData(void) const
 	return resp;
 }
 
-void responseHandler::allowedMethod(std::string const &root)
+void responseHandler::allowedMethod()
 {
 	try
 	{
-		t_location loc = conf.getLocation(root);
-		std::vector <std::string>::iterator res = std::find(loc.methods.begin(), loc.methods.end(), request.getReqData().method);
-		if (res == loc.methods.end())
+		t_route rt = conf.getRoute(request.getReqData().route);
+		std::string method = request.getReqData().method;
+		std::vector <std::string>::iterator res = std::find(rt.methods.begin(), rt.methods.end(), method);
+		if (res == rt.methods.end())
 		{
 			resp.respCode = 405;
 			throw errorHandler(resp.respCodes[405]);
@@ -108,8 +109,8 @@ void responseHandler::allowedMethod(std::string const &root)
 	}
 	catch(const std::exception& e)
 	{
-		resp.respCode = 500;
-		throw errorHandler(resp.respCodes[500]);
+		resp.respCode = 404;
+		throw errorHandler(resp.respCodes[404]);
 	}
 }
 
@@ -165,7 +166,12 @@ void responseHandler::runGet(void)
 		else
 		{
 			if (access(path.c_str(), R_OK) == 0)
-				fillResponseBody(path);
+			{
+				if (resp.respCode == 301 || resp.respCode == 302)
+					resp.headers["Location:"] = conf.getRoute(request.getReqData().route).redirect;
+				else
+					fillResponseBody(path);
+			}
 			else
 			{
 				resp.respCode = 403;
@@ -203,7 +209,11 @@ void responseHandler::runPost(void)
 					std::fstream file(path.c_str(), std::ios::out | std::ios::binary);
 					file.write(request.getReqData().body.content.c_str(), request.getReqData().body.content.size());
 					file.close();
-					fillResponseBody("etc/error/success.html");
+					std::stringstream size;
+					size << resp.body.size();
+					fillHeaders("keep-alive", size.str());
+					resp.headers["Location:"] = configUtils::buildPath(request.getReqData().route, filename);
+					resp.respCode = 201;
 				}
 			}
 			else
@@ -231,12 +241,7 @@ void responseHandler::runHead(void)
 	ss << file.rdbuf();
 	std::stringstream size;
 	size << ss.str().size();
-	resp.headers["Server:"] = SRV;
-	resp.headers["Date:"] = configUtils::getDateTime();
-	resp.headers["Content-Length:"] = size.str();
-	resp.headers["Connection:"] = "close";
-	resp.headers["ETag:"] = eTag(route.newRoot + route.page);
-	resp.headers["Accept-Ranges:"] = "bytes";
+	fillHeaders("close", size.str());
 }
 
 void responseHandler::runDelete(void)
@@ -270,8 +275,8 @@ void responseHandler::isMethod(std::string &mtd)
 		m = headers["Access-Control-Request-Method"];
 		if (m != GET && m != POST && m != DELETE && m != HEAD)
 		{
-			resp.respCode = 400;
-			throw errorHandler(resp.respCodes[400]);
+			resp.respCode = 501;
+			throw errorHandler(resp.respCodes[501]);
 		}
 		else
 			mtd = m;
@@ -280,8 +285,8 @@ void responseHandler::isMethod(std::string &mtd)
 		mtd = m;
 	else
 	{
-		resp.respCode = 400;
-		throw errorHandler(resp.respCodes[400]);
+		resp.respCode = 501;
+		throw errorHandler(resp.respCodes[501]);
 	}
 }
 
@@ -292,7 +297,7 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	{
 		isMethod(method);
 		isRoute(route);
-		allowedMethod(route.newRoot);
+		allowedMethod();
 		if (route.newRoot == "none" && request.getReqData().page.empty())
 		{
 			resp.respCode = 500;

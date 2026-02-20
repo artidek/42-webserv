@@ -93,6 +93,13 @@ void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 				setTimeout(newHost, prop);
 				count++;
 			}
+			else if (propName == "hostname")
+			{
+				if (prop.empty())
+					throw errorHandler(CONFIG_EMPTY, "hostname in host config");
+				newHost.hostname = prop;
+				count++;
+			}
 			else
 				throw errorHandler(INVALID_INSTRUCTION, propName);
 		}
@@ -138,8 +145,9 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 	std::string propName, prop;
 	count = 0;
 	blockTokens.pop();
-	if (key.at(key.size() - 1) == ':')
-		host.addRoute("", route);
+	if (key.at(0) != '/' || key.empty())
+		throw errorHandler(MISSING_TOKEN, "/ in route name");
+
 	try
 	{
 		while (!blockTokens.empty())
@@ -168,9 +176,24 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 				route.response = prop;
 				count++;
 			}
+			else if (propName == "methods")
+			{
+				if (prop == "none")
+					route.methods.push_back(prop);
+				else
+					configUtils::getFromList(route, blockTokens);
+				count++;
+			}
+			else if (propName == "redirect")
+			{
+				if (prop.empty() || (prop[0] != '/' && prop != "none"))
+					throw errorHandler(MISSING_TOKEN, "/ in route redirect");
+				route.redirect = prop;
+				count++;
+			}
 		}
-		if (count < 3)
-			throw errorHandler(MISSING_PROPERTY, " route");
+		if (count < 5)
+			throw errorHandler(MISSING_PROPERTY, " in route");
 		configUtils::ifPage(route.newRoot, route.page);
 	}
 	catch (const std::exception &e)
@@ -208,14 +231,6 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 				loc.enableUpload = configUtils::onOff(prop);
 				count++;
 			}
-			else if (propName == "methods")
-			{
-				if (prop == "none")
-					loc.methods.push_back(prop);
-				else
-					configUtils::getFromList(loc, blockTokens);
-				count++;
-			}
 			else if (propName == "list_ext")
 			{
 				if (prop == "none")
@@ -238,7 +253,7 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	if (count < 5)
+	if (count < 4)
 		throw errorHandler(MISSING_PROPERTY, " location");
 	if (key[key.size() - 1] != '/')
 		key += "/";

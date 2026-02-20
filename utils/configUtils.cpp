@@ -123,7 +123,7 @@ bool configUtils::onOff(std::string const &prop)
 		throw errorHandler(INVALID_INSTRUCTION, prop);
 }
 
-void configUtils::getFromList(t_location &loc,
+void configUtils::getFromList(t_route &route,
 	std::stack<std::string> &blockTokens)
 {
 	std::string setter;
@@ -139,7 +139,7 @@ void configUtils::getFromList(t_location &loc,
 			setter = setter.substr(0, setter.size() - 1);
 		if (setter == "GET" || setter == "HEAD" || setter == "POST"
 			|| setter == "DELETE")
-			loc.methods.push_back(setter);
+			route.methods.push_back(setter);
 		else
 			throw errorHandler(INVALID_INSTRUCTION, setter);
 		blockTokens.pop();
