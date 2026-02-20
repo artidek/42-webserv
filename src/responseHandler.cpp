@@ -34,13 +34,12 @@ s_response::s_response(void)
 	respCodes[503] = "Service Unavailable";
 }
 
-responseHandler::responseHandler(serverConfig const &config, requestHandler const &req) : size(0), total(0), request(req) {
+responseHandler::responseHandler(requestHandler const &req) : size(0), total(0), request(req) {
 
 	runMethod[GET] = &responseHandler::runGet;
 	runMethod[POST] = &responseHandler::runPost;
 	runMethod[HEAD] = &responseHandler::runHead;
 	runMethod[DELETE] = &responseHandler::runDelete;
-	conf = config;
 	emptyBody = false;
 	sendComplete = false;
 	cgi = false;
@@ -295,6 +294,7 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	std::string method;
 	try
 	{
+		conf = request.getConfig();
 		isMethod(method);
 		isRoute(route);
 		allowedMethod();

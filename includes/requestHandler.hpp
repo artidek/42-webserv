@@ -42,6 +42,7 @@ class requestHandler
 		t_request _request;
 		size_t _contLen;
 		size_t _totalSize;
+		std::map<std::string, serverConfig> configs;
 		static std::map<std::string, std::string> initHeaders(void);
 		std::vector<char> buffChunks;
 		void tokenize(void);
@@ -61,7 +62,7 @@ class requestHandler
 		void getRoutePage(std::string upToLastSlash, std::string parseRoute, size_t lastSlash);
 	public:
 		requestHandler(void);
-		requestHandler(serverConfig const &copy);
+		requestHandler(std::map<std::string, serverConfig> const &hosts);
 		requestHandler(requestHandler const &copy);
 		requestHandler &operator=(requestHandler const &copy);
 		~requestHandler(void);
@@ -82,6 +83,7 @@ class requestHandler
 		std::string const getReadHeader() const;
 		std::vector<char> const getBufChunks() const;
 		size_t getTotalSize() const;
+		std::map<std::string, serverConfig> getConfigs() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

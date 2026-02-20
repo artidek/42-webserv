@@ -64,7 +64,7 @@ class responseHandler
 		bool allowedExt(std::string const &name, bool upload);
 	public:
 		responseHandler ();
-		responseHandler(serverConfig const &config, requestHandler const &req);
+		responseHandler(requestHandler const &req);
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
 		~responseHandler(void);

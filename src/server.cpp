@@ -12,7 +12,7 @@ bool server::stop = false;
 bool server::stopped = true;
 int server::epollFd = -1;
 
-server::server(std::vector<serverConfig> const &conf, char **env) : configs(conf)
+server::server(std::map<std::string, serverConfig> const &conf, char **env) : configs(conf)
 {
 	for (int i = 0; env[i]; i++)
 		envp.push_back(std::string(env[i]));
@@ -34,7 +34,7 @@ void server::freeInfos(std::vector<addrinfo *> &infos)
 		freeaddrinfo(infos[i]);
 }
 
-void server::setAddrInfo(std::vector<addrinfo *> &infos, t_host const &host)
+void server::setAddrInfo(std::vector<addrinfo *> &infos)
 {
 	int				err;
 	struct addrinfo	hints;
@@ -48,11 +48,11 @@ void server::setAddrInfo(std::vector<addrinfo *> &infos, t_host const &host)
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
-	std::vector<std::string> p = host.ports;
-	for (size_t i = 0; i < p.size(); i++)
+	std::set<std::pair<std::string, std::string> >::iterator it = uniqueAddr.begin();
+	for (; it != uniqueAddr.end(); ++it)
 	{
 		res = NULL;
-		err = getaddrinfo(host.addr.c_str(), p[i].c_str(), &hints,
+		err = getaddrinfo(it->first.c_str(), it->second.c_str(), &hints,
 				&res);
 		if (err != 0)
 			throw errorHandler(FAILED_MAP_ADDR, std::string(gai_strerror(err)));
@@ -60,17 +60,15 @@ void server::setAddrInfo(std::vector<addrinfo *> &infos, t_host const &host)
 	}
 }
 
-void server::createSockets(serverConfig conf)
+void server::createSockets()
 {
 	int		sfd;
-	t_host	host;
 
 	std::vector<addrinfo *> infos;
-	host = conf.getHost();
 	int yes = 1;
 	try
 	{
-		setAddrInfo(infos, host);
+		setAddrInfo(infos);
 		for (size_t i = 0; i < infos.size(); i++)
 		{
 			sfd = socket(infos[i]->ai_family, infos[i]->ai_socktype,
@@ -81,7 +79,7 @@ void server::createSockets(serverConfig conf)
 			if (bind(sfd, infos[i]->ai_addr, infos[i]->ai_addrlen) == -1)
 				throw errorHandler(BIND_FAILED, std::string(strerror(errno)));
 			socketFds.push_back(sfd);
-			listenToHost[sfd] = conf;
+			//listenToHost[sfd] = conf;
 		}
 	}
 	catch (const std::exception &e)
@@ -103,11 +101,11 @@ void server::setNonBlocking(int &fd)
 
 void server::set()
 {
-	std::map<std::string, serverConfig>::iterator it;
+	setAddresses();
 	try
 	{
-		for (size_t i = 0; i < configs.size(); i++)
-			createSockets(configs[i]);
+		//for (size_t i = 0; i < configs.size(); i++)
+		createSockets();
 		epollFd = epoll_create1(0);
 		if (epollFd == -1)
 			throw errorHandler(EPOLL_CREATE_FAIL, std::string(strerror(errno)));
@@ -160,13 +158,13 @@ bool server::isPendingReq(int const &fd)
 	return true;
 }
 
-void server::handleRequest(int const &fd, serverConfig const &conf, requestHandler &rH)
+void server::handleRequest(int const &fd, requestHandler &rH)
 {
 	try
 	{
 		if (!isPendingReq(fd))
 		{
-			rH = requestHandler(conf);
+			rH = requestHandler(configs);
 			rH.addToTimeLog(fd, configUtils::getTime());
 		}
 		else
@@ -200,9 +198,9 @@ void server::handleRequest(int const &fd, serverConfig const &conf, requestHandl
 	}
 }
 
-void server::handleResponse(int const &fd, serverConfig const &conf, requestHandler const &req)
+void server::handleResponse(int const &fd, requestHandler const &req)
 {
-	responseHandler resp(conf, req);
+	responseHandler resp(req);
 	try
 	{
 		resp.createResponce(envp);
@@ -234,47 +232,43 @@ void server::handleResponse(int const &fd, serverConfig const &conf, requestHand
 
 void server::handleClientData(int const &fd)
 {
-	std::map<int, serverConfig>::iterator res;
-	res = fdToHost.find(fd);
 	requestHandler  req;
-	if (res != fdToHost.end())
+	try
 	{
-		try
+		if (event.events & EPOLLIN)
 		{
-			if (event.events & EPOLLIN)
+			handleRequest(fd, req);
+			if (req.requestComplete())
 			{
-				handleRequest(fd, res->second, req);
-				if (req.requestComplete())
-				{
-					req.removeFromTimeLog(fd);
-					pendingRequests.erase(fd);
-					req.parse();
-					handleResponse(fd, res->second, req);
-				}
-				else
-					pendingRequests[fd] = req;
+				req.removeFromTimeLog(fd);
+				pendingRequests.erase(fd);
+				req.parse();
+				handleResponse(fd, req);
 			}
-			if (event.events & EPOLLOUT)
+			else
+				pendingRequests[fd] = req;
+		}
+		if (event.events & EPOLLOUT)
+		{
+			std::map<int, responseHandler>::iterator resResp = pendingResponses.find(fd);
+			responseHandler &resp = resResp->second;
+			resp.sendToClient(fd);
+			if (resp.responseComplete())
 			{
-				std::map<int, responseHandler>::iterator resResp = pendingResponses.find(fd);
-				responseHandler &resp = resResp->second;
-				resp.sendToClient(fd);
-				if (resp.responseComplete())
-				{
 					disarmOut(fd);
 					closeConSock(fd);
 					pendingResponses.erase(fd);
-				}
 			}
-			
+		}
 		}
 		catch(const std::exception& e)
 		{
 			std::string err(e.what());
-			if (err == "Request Entity Too Large")
+			if (err == "Request Entity Too Large" || err == "Bad request")
 			{
 				responseHandler badResp;
-				badResp.sendBad(413, fd);
+				int rc = badResp.findRespCode(err);
+				badResp.sendBad(rc, fd);
 				if (!badResp.responseComplete())
 				{
 					pendingResponses[fd] = badResp;
@@ -284,7 +278,6 @@ void server::handleClientData(int const &fd)
 			}
 			closeConSock(fd);
 		}
-	}
 }
 
 void server::proceedEvents(int const &nfds, struct epoll_event *events)
@@ -309,7 +302,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);
-				fdToHost[conn_socket] = conf;
+				//fdToHost[conn_socket] = conf;
 			}
 		}
 		else
@@ -373,4 +366,17 @@ void server::disarmOut(int fd)
 {
 	event.events = EPOLLIN | EPOLLET;
 	epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+}
+
+void server::setAddresses()
+{
+	std::map<std::string, serverConfig>::iterator it = configs.begin();
+	for (; it != configs.end(); ++it)
+	{
+		t_host h =  it->second.getHost();
+		std::string ip = h.addr;
+		std::vector<std::string> ports = h.ports;
+		for (size_t j = 0; j < ports.size(); j++)
+			uniqueAddr.insert(std::make_pair(ip, ports[j]));
+	}
 }

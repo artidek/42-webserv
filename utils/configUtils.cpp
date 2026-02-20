@@ -9,6 +9,7 @@
 
 const char * t_dayMonth::days[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const char * t_dayMonth::months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+const int configUtils::respCodes[20] = {100, 200, 201, 202, 204, 300, 301, 302, 304, 400, 401, 403, 404, 405, 408, 413, 500, 501, 502, 503};
 
 bool configUtils::isCurlBr(unsigned char c)
 {
@@ -43,9 +44,8 @@ void configUtils::checkAddr(std::string addr)
 	{
 		if (buff.empty())
 			throw errorHandler(INVALID_INSTRUCTION, addr);
-		std::stringstream toNum(buff);
-		toNum >> addrPart;
-		if (toNum.fail() || addrPart > 255)
+		addrPart = toNum(buff);
+		if (addrPart > 255)
 			throw errorHandler(INVALID_INSTRUCTION, addr);
 		i++;
 	}
@@ -57,10 +57,9 @@ void configUtils::checkPort(std::string port)
 {
 	unsigned int	p;
 
-	std::stringstream ss(port);
-	ss >> p;
-	if (ss.fail())
-		throw errorHandler(INVALID_INSTRUCTION, port);
+	if (port.size() < 2)
+		throw errorHandler (INVALID_INSTRUCTION, port);
+	p = toNum(port);
 	if (p > 65535)
 		throw errorHandler(INVALID_INSTRUCTION, port);
 }
@@ -79,6 +78,13 @@ unsigned int configUtils::toNum(std::string s)
 	ss >> num;
 	if (ss.fail())
 		throw errorHandler(INVALID_INSTRUCTION, s);
+	if (s.size() > 1 && s[0] == '0')
+		throw errorHandler (INVALID_INSTRUCTION, s);
+	for (size_t i = 0; i < s.size(); i++)
+	{
+		if (!std::isdigit(s[i]))
+			throw errorHandler(INVALID_INSTRUCTION, s);
+	}
 	return (num);
 }
 
@@ -262,4 +268,14 @@ std::string configUtils::buildPath(std::string const &path, std::string const &n
 	else
 		res = path + name;
 	return res;
+}
+
+bool configUtils::isResCode(int const &code)
+{
+	for (int i = 0; i < 20; i++)
+	{
+		if (code == respCodes[i])
+			return true;
+	}
+	return false;
 }

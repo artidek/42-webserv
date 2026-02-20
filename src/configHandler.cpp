@@ -31,8 +31,6 @@ void configHandler::setMaxReqBody(t_host &newHost, std::string const &prop)
 	try
 	{
 		maxBody = configUtils::toNum(prop);
-		if (maxBody > 1048576)
-			throw errorHandler(INVALID_INSTRUCTION, prop);
 	}
 	catch (const std::exception &e)
 	{
@@ -103,7 +101,7 @@ void configHandler::fillHostConf(std::stack<std::string> &blockTokens)
 			else
 				throw errorHandler(INVALID_INSTRUCTION, propName);
 		}
-		if (count < 4)
+		if (count < 5)
 			throw errorHandler(MISSING_PROPERTY, " host config");
 	}
 	catch (const std::exception &e)
@@ -171,7 +169,7 @@ void configHandler::fillRoute(std::stack<std::string> &blockTokens)
 			else if (propName == "success_response")
 			{
 				resp = configUtils::toNum(prop);
-				if (resp < 100 || resp > 599)
+				if (!configUtils::isResCode(resp))
 					throw errorHandler(INVALID_INSTRUCTION, prop);
 				route.response = prop;
 				count++;

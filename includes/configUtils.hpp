@@ -18,6 +18,7 @@ typedef struct s_dayMonth
 class configUtils
 {
 	private:
+		static const int respCodes[20];
 		configUtils(void);
 		configUtils(configUtils const &copy);
 		configUtils &operator=(configUtils const &copy);
@@ -42,5 +43,6 @@ class configUtils
 		static std::string getDateTime(void);
 		static std::time_t getTime(void);
 		static std::string buildPath(std::string const &path, std::string const &name);
+		static bool isResCode(int const &code);
 };
 #endif

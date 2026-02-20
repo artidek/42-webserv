@@ -32,10 +32,9 @@ bool t_reqBody::empty(void)
 	return false;
 }
 
-requestHandler::requestHandler(serverConfig const &conf) : _readLen(0), _host(conf), _contLen(0), _totalSize(0), _isHeader(false) {}
+requestHandler::requestHandler(std::map<std::string, serverConfig> const &hosts) : _readLen(0), _contLen(0), _totalSize(0), configs(hosts), _isHeader(false) {}
 
 requestHandler::requestHandler(void) {}
-
 requestHandler::~requestHandler(void) {}
 
 requestHandler::requestHandler(requestHandler const &copy)
@@ -51,6 +50,7 @@ requestHandler::requestHandler(requestHandler const &copy)
 	_readHeaders = copy.getReadHeader();
 	buffChunks = copy.getBufChunks();
 	_totalSize = copy.getTotalSize();
+	configs = copy.getConfigs();
 }
 
 requestHandler &requestHandler::operator=(requestHandler const &copy)
@@ -66,6 +66,7 @@ requestHandler &requestHandler::operator=(requestHandler const &copy)
 	_readHeaders = copy.getReadHeader();
 	buffChunks = copy.getBufChunks();
 	_totalSize = copy.getTotalSize();
+	configs = copy.getConfigs();
 	return *this;
 }
 
@@ -237,13 +238,16 @@ void requestHandler::checkTimeout(int fd)
 {
 	std::time_t now = std::time(NULL);
 	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
-	int reqTimeout = _host.getHost().hostTimeout;
-	if (res != timeLog.end() && now - res->second >= reqTimeout)
+	t_host h = _host.getHost();
+	if (!h.empty())
 	{
+		int reqTimeout = _host.getHost().hostTimeout;
+		if (res != timeLog.end() && now - res->second >= reqTimeout)
+		{
 		timeLog.erase(fd);
 		throw errorHandler("Request Timeout");
+		}
 	}
-
 }
 
 bool requestHandler::requestComplete(void)
@@ -377,9 +381,24 @@ void requestHandler::isHeaders()
 	size_t found = combined.find("\r\n\r\n");
 	if (found != std::string::npos)
 	{
+		_readHeaders = combined.substr(0, found);
+		std::string hostHeader = "Host:";
+		size_t pos = _readHeaders.find(hostHeader);
+		std::stringstream ss(_readHeaders.data() + pos + hostHeader.size() + 1);
+		std::string hostName;
+		std::getline(ss, hostName, '\n');
+		if (!hostName.empty())
+		{
+			configUtils::trim(hostName," \r\n");
+			size_t found = hostName.find(":");
+			hostName = hostName.substr(0, found);
+			if (configs.find(hostName) != configs.end())
+				_host = configs[hostName];
+			else
+				throw errorHandler("Bad Request");
+		}
 		_readLen -= static_cast<int>(found) + 4;
 		fillMethodRoute(combined);
-		_readHeaders = combined.substr(0, found);
 		setContLen();
 		if (_contLen > 0)
 			_totalSize += _contLen;
@@ -398,3 +417,5 @@ std::string const requestHandler::getReadHeader() const {return _readHeaders;}
 std::vector<char> const requestHandler::getBufChunks() const {return buffChunks;}
 
 size_t requestHandler::getTotalSize() const {return _totalSize;}
+
+std::map<std::string, serverConfig> requestHandler::getConfigs() const {return configs;}
