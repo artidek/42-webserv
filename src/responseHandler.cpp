@@ -95,21 +95,22 @@ t_response const responseHandler::getResponceData(void) const
 
 void responseHandler::allowedMethod()
 {
+	t_route rt;
 	try
 	{
-		t_route rt = conf.getRoute(request.getReqData().route);
-		std::string method = request.getReqData().method;
-		std::vector <std::string>::iterator res = std::find(rt.methods.begin(), rt.methods.end(), method);
-		if (res == rt.methods.end())
-		{
-			resp.respCode = 405;
-			throw errorHandler(resp.respCodes[405]);
-		}
+		rt = conf.getRoute(request.getReqData().route);
 	}
 	catch(const std::exception& e)
 	{
 		resp.respCode = 404;
 		throw errorHandler(resp.respCodes[404]);
+	}
+	std::string method = request.getReqData().method;
+	std::vector <std::string>::iterator res = std::find(rt.methods.begin(), rt.methods.end(), method);
+	if (res == rt.methods.end())
+	{
+		resp.respCode = 405;
+		throw errorHandler(resp.respCodes[405]);
 	}
 }
 
@@ -118,7 +119,6 @@ void responseHandler::isRoute(t_route &route)
 	try
 	{
 		route = conf.getRoute(request.getReqData().route);
-		
 	}
 	catch(const std::exception& e)
 	{
@@ -230,7 +230,7 @@ void responseHandler::runPost(void)
 
 void responseHandler::runHead(void)
 {
-	if (request.getReqData().page.empty() || access(path.c_str(), R_OK) != 0)
+	if (checkNone(path) || access(path.c_str(), R_OK) != 0)
 	{
 		resp.respCode = 404;
 		throw errorHandler(resp.respCodes[404]);
@@ -317,6 +317,7 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	}
 	catch(const std::exception& e)
 	{
+		std::cout << "throws from head\n";
 		std::string err(e.what());
 		if (err.find("No data available") != std::string::npos)
 			resp.respCode = 500;

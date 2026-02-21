@@ -337,9 +337,8 @@ void server::run()
 
 void server::closeConSock(int const &fd)
 {
-	epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 	if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
-		std::cout << "epoll_ctl_del failed";
+		std::cout << "epoll_ctl_del failed\n";
 	close(fd);
 	fdToHost.erase(fd);
 }
