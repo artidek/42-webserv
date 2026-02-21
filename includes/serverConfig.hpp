@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/20 01:02:34 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/21 19:22:10 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,7 @@ typedef struct s_location
 class serverConfig
 {
 	private:
+		std::map<std::string, std::string> mimeTypes;
 		std::map<std::string, t_location>locations;
 		std::map<std::string, t_route>routes;
 		std::map<unsigned short, std::string>errorPages;
@@ -77,6 +78,7 @@ class serverConfig
 		static const std::map<std::string, std::string>env;
 		t_cgi cgiConf;
 		static std::map<std::string, std::string> makeEnv(void);
+		void setMimeTypes();
 	public:
 		serverConfig(void);
 		serverConfig(serverConfig const &copy);
@@ -97,6 +99,8 @@ class serverConfig
 		std::map<std::string, t_route> getRoutes(void) const;
 		std::map<unsigned short, std::string> getErrorPages(void) const;
 		std::string getErrorPage(unsigned short error) const;
+		bool checkMimeTypes(std::string const &type, std::string &ext);
+		std::map<std::string, std::string> getMimeTypes() const;
 };
 
 #endif

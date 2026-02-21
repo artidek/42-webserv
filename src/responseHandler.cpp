@@ -28,6 +28,7 @@ s_response::s_response(void)
 	respCodes[405] = "Method Not Allowed";
 	respCodes[408] = "Request Timeout";
 	respCodes[413] = "Request Entity Too Large";
+	respCodes[415] = "Unsupported Media Type";
 	respCodes[500] = "Internal Server Error";
 	respCodes[501] = "Not Implemented";
 	respCodes[502] = "Bad Gateway";
@@ -196,12 +197,24 @@ void responseHandler::runPost(void)
 		{
 			if (conf.getLocation(route.newRoot).enableUpload)
 			{
+				std::string ext;
+				std::map<std::string, std::string>headers = request.getReqData().headers;
+				std::map<std::string, std::string>::iterator res =  headers.find("Content-Type");
+				if ( res != headers.end())
+				{
+					if (!conf.checkMimeTypes(res->second, ext))
+						throw errorHandler("Unsupported Media Type");
+				}
+				else
+					throw errorHandler("Unsupported Media Type");
 				std::string filename = request.getReqData().body.fileName;
+				if (filename.empty())
+					filename += ext;
 				filename = configUtils::trim(filename, "\"");
 				uniqueName(filename);
 				std::string path = route.newRoot;
 				if (path[path.size() - 1] != '/')
-					path += '/';
+				path += '/';
 				path += filename;
 				if (allowedExt(filename, true))
 				{
@@ -221,6 +234,7 @@ void responseHandler::runPost(void)
 				throw errorHandler(resp.respCodes[403]);
 			}
 		}
+		
 	}
 	catch(const std::exception& e)
 	{
@@ -317,7 +331,6 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	}
 	catch(const std::exception& e)
 	{
-		std::cout << "throws from head\n";
 		std::string err(e.what());
 		if (err.find("No data available") != std::string::npos)
 			resp.respCode = 500;

@@ -204,6 +204,7 @@ void server::handleResponse(int const &fd, requestHandler const &req)
 	try
 	{
 		resp.createResponce(envp);
+		std::cout << "Resp code " << resp.getRespCode() << std::endl;
 		resp.sendResponse(fd);
 		if (resp.responseComplete())
 			closeConSock(fd);

@@ -82,9 +82,10 @@ serverConfig::serverConfig(void) {
 	cgiConf.defaultCgi = "none";
 	cgiConf.extensions.push_back("php");
 	cgiConf.extensions.push_back("py");
+	setMimeTypes();
 }
 
-serverConfig::serverConfig(serverConfig const &copy) : locations(copy.getLocations()), routes(copy.getRoutes()), errorPages(copy.getErrorPages()), host(copy.getHost()), cgiConf(copy.getCgiConf()){}
+serverConfig::serverConfig(serverConfig const &copy) : mimeTypes(copy.getMimeTypes()),locations(copy.getLocations()), routes(copy.getRoutes()), errorPages(copy.getErrorPages()), host(copy.getHost()), cgiConf(copy.getCgiConf()){}
 
 serverConfig& serverConfig::operator=(serverConfig const &copy)
 {
@@ -95,9 +96,62 @@ serverConfig& serverConfig::operator=(serverConfig const &copy)
 		errorPages = copy.getErrorPages();
 		host = copy.getHost();
 		cgiConf = copy.getCgiConf();
+		mimeTypes = copy.getMimeTypes();
 	}
 	
 	return *this;
+}
+
+void serverConfig::setMimeTypes()
+{
+	mimeTypes["text/plain"] = ".txt";
+    mimeTypes["text/html"] = ".html";
+    mimeTypes["text/css"] = ".css";
+    mimeTypes["text/csv"] = ".csv";
+    mimeTypes["text/xml"] = ".xml";
+
+    // Images
+    mimeTypes["image/jpeg"] = ".jpg";
+    mimeTypes["image/png"] = ".png";
+    mimeTypes["image/gif"] = ".gif";
+    mimeTypes["image/bmp"] = ".bmp";
+    mimeTypes["image/webp"] = ".webp";
+    mimeTypes["image/svg+xml"] = ".svg";
+    mimeTypes["image/x-icon"] = ".ico";
+    mimeTypes["image/tiff"] = ".tif";
+
+    // Application
+    mimeTypes["application/pdf"] = ".pdf";
+    mimeTypes["application/json"] = ".json";
+    mimeTypes["application/xml"] = ".xml";
+    mimeTypes["application/zip"] = ".zip";
+    mimeTypes["application/x-7z-compressed"] = ".7z";
+    mimeTypes["application/x-rar-compressed"] = ".rar";
+    mimeTypes["application/gzip"] = ".gz";
+    mimeTypes["application/x-tar"] = ".tar";
+    mimeTypes["application/octet-stream"] = ".bin";
+
+    // MS Office
+    mimeTypes["application/msword"] = ".doc";
+    mimeTypes["application/vnd.ms-excel"] = ".xls";
+    mimeTypes["application/vnd.ms-powerpoint"] = ".ppt";
+
+    // OOXML
+    mimeTypes["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] = ".docx";
+    mimeTypes["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = ".xlsx";
+    mimeTypes["application/vnd.openxmlformats-officedocument.presentationml.presentation"] = ".pptx";
+
+    // Audio
+    mimeTypes["audio/mpeg"] = ".mp3";
+    mimeTypes["audio/wav"] = ".wav";
+    mimeTypes["audio/ogg"] = ".ogg";
+
+    // Video
+    mimeTypes["video/mp4"] = ".mp4";
+    mimeTypes["video/x-msvideo"] = ".avi";
+    mimeTypes["video/x-matroska"] = ".mkv";
+    mimeTypes["video/webm"] = ".webm";
+    mimeTypes["video/quicktime"] = ".mov";
 }
 
 serverConfig::~serverConfig(void) {}
@@ -217,3 +271,16 @@ t_location serverConfig::getLocation(std::string location)
 		throw errorHandler(NO_DATA, location);
 	return res->second;
 }
+
+bool serverConfig::checkMimeTypes(std::string const &type, std::string &ext)
+{
+	std::map<std::string, std::string>::iterator res = mimeTypes.find(type);
+	if (res != mimeTypes.end())
+	{
+		ext = res->second;
+		return true;
+	}
+	return false;
+}
+
+std::map<std::string, std::string> serverConfig::getMimeTypes() const {return mimeTypes;}

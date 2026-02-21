@@ -204,7 +204,6 @@ void requestHandler::fillReqBodyApp()
 	 if (restOfReq.size() < _contLen)
 	 	throw errorHandler("Not fully read");
 	_request.body.content = restOfReq;
-	_request.body.fileName = "uploadded_file";
 }
 
 void requestHandler::parse(void)
