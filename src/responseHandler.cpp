@@ -202,14 +202,15 @@ void responseHandler::runPost(void)
 				std::map<std::string, std::string>::iterator res =  headers.find("Content-Type");
 				if ( res != headers.end())
 				{
-					if (!conf.checkMimeTypes(res->second, ext))
+					std::string type = configUtils::trim(res->second, " \r\n");
+					if (!conf.checkMimeTypes(type, ext))
 						throw errorHandler("Unsupported Media Type");
 				}
 				else
 					throw errorHandler("Unsupported Media Type");
 				std::string filename = request.getReqData().body.fileName;
 				if (filename.empty())
-					filename += ext;
+					filename = "uploaded_file" + ext;
 				filename = configUtils::trim(filename, "\"");
 				uniqueName(filename);
 				std::string path = route.newRoot;
