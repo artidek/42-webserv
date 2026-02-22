@@ -125,6 +125,10 @@ void configParser::checkBlock(std::stack<std::string> &blockTokens)
 		{
 			blockProp = token;
 			tokens.pop();
+			if (tokens.empty() && token.empty())
+				throw errorHandler(NO_DATA, "host");
+			else if (tokens.empty())
+				throw errorHandler(INVALID_INSTRUCTION, token);
 			token = tokens.top();
 			res = blockNames.find(token);
 			if (res == blockNames.end() && token != "}")
@@ -160,6 +164,8 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
 		}
 		blockTokens.push(token);
 		tokens.pop();
+		if (tokens.empty())
+			throw errorHandler(INVALID_INSTRUCTION, "wrong list assignment");
 		token = tokens.top();
 	}
 	throw errorHandler(MISSING_TOKEN, "[");
@@ -181,6 +187,12 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
 			last = token[token.size() - 1];
  			if (last == ':' || last == ';')
  			{
+				if (last == ';')
+				{
+					size_t found = token.find(";");
+					if (found != token.size() - 1)
+						throw errorHandler(WRONG_TOKEN, ";");
+				}
  				blockTokens.push(token);
 				tokens.pop();
  			}
@@ -202,6 +214,8 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
 					throw errorHandler(MISSING_TOKEN, "}");
 				}
  				tokens.pop();
+				if (tokens.empty())
+					throw errorHandler(NO_DATA, "host");
  				if (tokens.top() != "host")
 					checkBlock(blockTokens);
  				blockEnd = false;

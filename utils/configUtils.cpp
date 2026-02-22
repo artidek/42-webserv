@@ -20,16 +20,12 @@ bool configUtils::isCurlBr(unsigned char c)
 
 void configUtils::checkExt(std::string confFile)
 {
-	std::stringstream ss(confFile);
-	std::string name, extension;
-	if (std::getline(ss, name, '.') && std::getline(ss, extension))
-	{
-		if (extension == "conf")
-			return ;
-		else
-			throw errorHandler(WRONG_EXT, extension);
-	}
-	throw errorHandler(WRONG_EXT, "");
+	size_t found = confFile.rfind(".");
+	if (found == std::string::npos)
+		throw errorHandler(WRONG_FILE, confFile);
+	std::string ext = confFile.substr(found + 1);
+	if (ext.empty() || ext != "conf")
+		throw errorHandler(WRONG_EXT, confFile);
 }
 
 void configUtils::checkAddr(std::string addr)
