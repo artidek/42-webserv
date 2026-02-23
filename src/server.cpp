@@ -158,46 +158,6 @@ bool server::isPendingReq(int const &fd)
 	return true;
 }
 
-void server::handleRequest(int const &fd, requestHandler &rH)
-{
-	try
-	{
-		if (!isPendingReq(fd))
-		{
-			rH = requestHandler(configs);
-			rH.addToTimeLog(fd, configUtils::getTime());
-		}
-		else
-			rH = pendingRequests[fd];
-		rH.read(fd);
-	}
-	catch(const std::exception& e)
-	{
-		std::string err(e.what());
-		//bad request should be handled with err response and closing connection
-		if (err == "Bad request" || err == "Request Timeout" || err == "Reading error")
-		{
-			rH.removeFromTimeLog(fd);
-			pendingRequests.erase(fd);
-			responseHandler badResp;
-			int rc = badResp.findRespCode(err);
-			if (rc > 0)
-				badResp.sendBad(rc, fd);
-			else
-				badResp.sendBad(400, fd);
-			if (!badResp.responseComplete())
-			{
-				pendingResponses[fd] = badResp;
-				armOut(fd);
-			}
-			else
-			{
-				throw errorHandler(err);
-			}
-		}
-	}
-}
-
 void server::handleResponse(int const &fd, requestHandler const &req)
 {
 	responseHandler resp(req);
@@ -216,37 +176,33 @@ void server::handleResponse(int const &fd, requestHandler const &req)
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
-		if (err != "Send failed" || err != "Peer closed")
-		{
-			resp.sendBad(resp.getRespCode(), fd);
-			if (!resp.responseComplete())
-			{
-				pendingResponses[fd] = resp;
-				armOut(fd);
-			}
-			else
-				throw errorHandler(err);
-		}
+		throw errorHandler(err);
 	}
 }
 
 void server::handleClientData(int const &fd)
 {
 	requestHandler  req;
+	if (isPendingReq(fd))
+		req = pendingRequests[fd];
 	try
 	{
 		if (event.events & EPOLLIN)
 		{
-			handleRequest(fd, req);
+			req.read(fd);
 			if (req.requestComplete())
 			{
-				req.removeFromTimeLog(fd);
+				timeLog.erase(fd);
 				pendingRequests.erase(fd);
 				req.parse();
 				handleResponse(fd, req);
 			}
-			else
+			if (!isPendingReq(fd))
+			{
 				pendingRequests[fd] = req;
+				addToTimeLog(fd, configUtils::getTime());
+			}
+			checkTimeout(fd, req.getConfig().getHost().hostTimeout);
 		}
 		if (event.events & EPOLLOUT)
 		{
@@ -264,19 +220,21 @@ void server::handleClientData(int const &fd)
 		catch(const std::exception& e)
 		{
 			std::string err(e.what());
-			if (err == "Request Entity Too Large" || err == "Bad request")
+			if (err != "Send failed" && err != "Peer closed" && err != "Client closed connection")
 			{
 				responseHandler badResp;
 				int rc = badResp.findRespCode(err);
-				badResp.sendBad(rc, fd);
-				if (!badResp.responseComplete())
+				if (rc > 0)
+					badResp.sendBad(rc, fd);
+				else
+					badResp.sendBad(400, fd);
+				if (isPendingReq(fd))
 				{
-					pendingResponses[fd] = badResp;
-					armOut(fd);
-					return;
+					timeLog.erase(fd);
+					pendingRequests.erase(fd);
 				}
+				closeConSock(fd);
 			}
-			closeConSock(fd);
 		}
 }
 
@@ -377,5 +335,23 @@ void server::setAddresses()
 		std::vector<std::string> ports = h.ports;
 		for (size_t j = 0; j < ports.size(); j++)
 			uniqueAddr.insert(std::make_pair(ip, ports[j]));
+	}
+}
+
+void server::addToTimeLog(int fd, std::time_t sec)
+{
+	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
+	if (res == timeLog.end())
+		timeLog[fd] = sec;
+}
+
+void server::checkTimeout(int fd, int timeOut)
+{
+	std::time_t now = std::time(NULL);
+	std::cout << timeOut << std::endl;
+	if ( now - timeLog[fd] > timeOut)
+	{
+		timeLog.erase(fd);
+		throw errorHandler("Request Timeout");
 	}
 }

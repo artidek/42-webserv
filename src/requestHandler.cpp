@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <cstring>
 
-std::map<int, std::time_t>requestHandler::timeLog;
 std::map<std::string, std::string> requestHandler::_headers = initHeaders();
 
 std::map<std::string, std::string> requestHandler::initHeaders(void)
@@ -88,7 +87,7 @@ void requestHandler::read(int const &fd)
 				_totalSize += _readLen;
 		}
 		else if (readBytes == 0)
-			throw errorHandler("Client closed connection");
+			return;
 		else
 		{
 			if (errno == EINTR)
@@ -99,7 +98,6 @@ void requestHandler::read(int const &fd)
 				throw errorHandler("Reading error");
 		}
 	}
-	checkTimeout(fd);
 }
 
 void requestHandler::setBodyEnd()
@@ -226,29 +224,6 @@ void requestHandler::parse(void)
 
 t_request const requestHandler::getReqData(void) const { return _request; }
 
-void requestHandler::addToTimeLog(int fd, std::time_t sec)
-{
-	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
-	if (res == timeLog.end())
-		timeLog[fd] = sec;
-}
-
-void requestHandler::checkTimeout(int fd)
-{
-	std::time_t now = std::time(NULL);
-	std::map<int, std::time_t>::iterator res = timeLog.find(fd);
-	t_host h = _host.getHost();
-	if (!h.empty())
-	{
-		int reqTimeout = _host.getHost().hostTimeout;
-		if (res != timeLog.end() && now - res->second >= reqTimeout)
-		{
-		timeLog.erase(fd);
-		throw errorHandler("Request Timeout");
-		}
-	}
-}
-
 bool requestHandler::requestComplete(void)
 {
 	if (!_isHeader)
@@ -286,8 +261,6 @@ serverConfig const requestHandler::getConfig(void) const {return _host;}
 std::string const requestHandler::getEndBody(void) const {return _endBody;}
 
 std::stack<std::string> const requestHandler::getTokens(void) const {return _tokens;}
-
-void requestHandler::removeFromTimeLog(int const &fd) {timeLog.erase(fd);}
 
 void requestHandler::parseRoute(std::string const &rawRoute)
 {

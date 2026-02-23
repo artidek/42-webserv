@@ -203,7 +203,11 @@ void responseHandler::runPost(void)
 				if ( res != headers.end())
 				{
 					std::string type = configUtils::trim(res->second, " \r\n");
-					if (!conf.checkMimeTypes(type, ext))
+					size_t found = type.find(";");
+					if (found != std::string::npos)
+						type = type.substr(0, found);
+					std::cout << type << std::endl;
+					if (type != "multipart/form-data" && !conf.checkMimeTypes(type, ext))
 						throw errorHandler("Unsupported Media Type");
 				}
 				else

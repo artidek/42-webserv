@@ -73,6 +73,7 @@ serverConfig::serverConfig(void) {
 	errorPages[404] = "etc/error/404.html";
 	errorPages[405] = "etc/error/405.html";
 	errorPages[408] = "etc/error/408.html";
+	errorPages[415] = "etc/error/415.html";
 	errorPages[413] = "etc/error/413.html";
 	errorPages[500] = "etc/error/500.html";
 	errorPages[501] = "etc/error/501.html";

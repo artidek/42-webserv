@@ -36,7 +36,6 @@ class requestHandler
 		std::string _rawData;
 		std::string _endBody;
 		std::string _readHeaders;
-		static std::map<int, std::time_t>timeLog;
 		std::stack<std::string> _tokens;
 		static std::map<std::string, std::string> _headers;
 		t_request _request;

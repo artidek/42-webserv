@@ -28,6 +28,7 @@ class server
 		std::map<std::string, serverConfig> configs;
 		std::map<int, serverConfig> fdToHost;
 		std::map<int, serverConfig> listenToHost;
+		std::map<int, std::time_t>timeLog;
 		std::vector<int> socketFds;
 		std::vector<std::string> envp;
 		std::set<std::pair<std::string, std::string> >uniqueAddr;
@@ -53,6 +54,8 @@ class server
 		void disarmOut(int fd);
 		bool badResponse(int fd, std::string  const &err);
 		void setAddresses();
+		void addToTimeLog(int fd, std::time_t sec);
+		void checkTimeout(int fd, int timeOut);
 	public:
 		server(std::map<std::string, serverConfig> const &conf, char **env);
 		~server(void);
