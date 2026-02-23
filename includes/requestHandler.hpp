@@ -73,10 +73,7 @@ class requestHandler
 		serverConfig const getConfig(void) const;
 		std::string const getEndBody(void) const;
 		std::stack<std::string> const getTokens(void) const;
-		void addToTimeLog(int fd, std::time_t sec);
-		void removeFromTimeLog(int const & fd);
 		size_t getContLen() const;
-		void checkTimeout(int fd);
 		int getReadLen() const;
 		bool getIsheader() const;
 		std::string const getReadHeader() const;
