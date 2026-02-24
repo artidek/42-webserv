@@ -10,7 +10,7 @@ const std::map<std::string, std::string> serverConfig::env = serverConfig::makeE
 
 bool s_host::empty(void)
 {
-	if (addr.empty() && ports.empty() && maxReqBody == 0 && hostTimeout == 0)
+	if (addr.empty() && ports.empty())
 		return true;
 	return false;
 }

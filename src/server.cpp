@@ -180,29 +180,56 @@ void server::handleResponse(int const &fd, requestHandler const &req)
 	}
 }
 
+bool server::handleRequest(int const &fd)
+{
+	requestHandler &rH = pendingRequests[fd];
+	try
+	{
+		rH.read(fd);
+		if (!rH.headersOk())
+			rH.extractHeaders();
+		if (rH.headersOk())
+		{
+			if (rH.getConfig().getHost().empty())
+			{
+				t_host host = rH.setHost();
+				if (!host.empty())
+					fdToHost[fd] = host;
+			}
+			if (rH.requestComplete())
+			{
+				rH.parse();
+				timeLog.erase(fd);
+				fdToHost.erase(fd);
+				return true;
+			}
+		}
+		return false;
+	}
+	catch(const std::exception& e)
+	{
+		std::cout << std::string(e.what()) << std::endl;
+		throw errorHandler("Bad request");
+	}
+	
+}
+
 void server::handleClientData(int const &fd)
 {
-	requestHandler  req;
-	if (isPendingReq(fd))
-		req = pendingRequests[fd];
 	try
 	{
 		if (event.events & EPOLLIN)
 		{
-			req.read(fd);
-			if (req.requestComplete())
-			{
-				timeLog.erase(fd);
-				pendingRequests.erase(fd);
-				req.parse();
-				handleResponse(fd, req);
-			}
 			if (!isPendingReq(fd))
 			{
+				requestHandler  req(configs);
 				pendingRequests[fd] = req;
-				addToTimeLog(fd, configUtils::getTime());
 			}
-			checkTimeout(fd, req.getConfig().getHost().hostTimeout);
+			if (handleRequest(fd))
+			{
+				handleResponse(fd, pendingRequests[fd]);
+				pendingRequests.erase(fd);
+			}
 		}
 		if (event.events & EPOLLOUT)
 		{
@@ -220,21 +247,17 @@ void server::handleClientData(int const &fd)
 		catch(const std::exception& e)
 		{
 			std::string err(e.what());
-			if (err != "Send failed" && err != "Peer closed" && err != "Client closed connection")
-			{
-				responseHandler badResp;
-				int rc = badResp.findRespCode(err);
-				if (rc > 0)
-					badResp.sendBad(rc, fd);
-				else
-					badResp.sendBad(400, fd);
-				if (isPendingReq(fd))
-				{
-					timeLog.erase(fd);
-					pendingRequests.erase(fd);
-				}
-				closeConSock(fd);
-			}
+			responseHandler badResp;
+			int rc = badResp.findRespCode(err);
+			if (rc > 0)
+				badResp.sendBad(rc, fd);
+			else
+				badResp.sendBad(400, fd);
+			timeLog.erase(fd);
+			fdToHost.erase(fd);
+			if (isPendingReq(fd))
+				pendingRequests.erase(fd);
+			closeConSock(fd);
 		}
 }
 
@@ -348,7 +371,6 @@ void server::addToTimeLog(int fd, std::time_t sec)
 void server::checkTimeout(int fd, int timeOut)
 {
 	std::time_t now = std::time(NULL);
-	std::cout << timeOut << std::endl;
 	if ( now - timeLog[fd] > timeOut)
 	{
 		timeLog.erase(fd);

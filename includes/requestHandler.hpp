@@ -8,7 +8,7 @@
 #include <ctime>
 
 
-#define BUFFER_SIZE  65536
+#define BUFFER_SIZE  8192
 
 class responseHandler;
 typedef struct s_reqBody
@@ -41,6 +41,7 @@ class requestHandler
 		t_request _request;
 		size_t _contLen;
 		size_t _totalSize;
+		size_t accumulated;
 		std::map<std::string, serverConfig> configs;
 		static std::map<std::string, std::string> initHeaders(void);
 		std::vector<char> buffChunks;
@@ -52,10 +53,8 @@ class requestHandler
 		void setBodyEnd();
 		void setContLen();
 		bool isBodyHeader(std::string &h, std::string &v, std::string const &token);
-		bool _isHeader;
 		void parseRoute(std::string const &rawRoute);
 		void fillReqBodyApp();
-		void isHeaders();
 		bool doneReading();
 		std::string combine();
 		void getRoutePage(std::string upToLastSlash, std::string parseRoute, size_t lastSlash);
@@ -65,6 +64,7 @@ class requestHandler
 		requestHandler(requestHandler const &copy);
 		requestHandler &operator=(requestHandler const &copy);
 		~requestHandler(void);
+		bool _isHeader;
 		void read(int const &fd);
 		void parse(void);
 		std::string const &getRawData(void) const;
@@ -80,6 +80,10 @@ class requestHandler
 		std::vector<char> const getBufChunks() const;
 		size_t getTotalSize() const;
 		std::map<std::string, serverConfig> getConfigs() const;
+		void extractHeaders();
+		t_host setHost();
+		bool headersOk();
+		size_t getAccum() const;
 };
 
 std::ostream &operator<< (std::ostream &o, requestHandler const &req);

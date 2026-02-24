@@ -26,7 +26,7 @@ class server
 		std::map<int, requestHandler> pendingRequests;
 		std::map<int, responseHandler> pendingResponses;
 		std::map<std::string, serverConfig> configs;
-		std::map<int, serverConfig> fdToHost;
+		std::map<int, t_host> fdToHost;
 		std::map<int, serverConfig> listenToHost;
 		std::map<int, std::time_t>timeLog;
 		std::vector<int> socketFds;
@@ -46,7 +46,7 @@ class server
 		bool listenSocket(int const &fd, serverConfig &conf);
 		void handleClientData(int const &fd);
 		bool isPendingReq(int const &fd);
-		void handleRequest(int const &fd, requestHandler &rH);
+		bool handleRequest(int const &fd);
 		void handleResponse(int const &fd, requestHandler const &req);
 		void closeConSock(int const &fd);
 		void stopServer();

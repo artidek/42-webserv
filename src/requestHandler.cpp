@@ -31,7 +31,7 @@ bool t_reqBody::empty(void)
 	return false;
 }
 
-requestHandler::requestHandler(std::map<std::string, serverConfig> const &hosts) : _readLen(0), _contLen(0), _totalSize(0), configs(hosts), _isHeader(false) {}
+requestHandler::requestHandler(std::map<std::string, serverConfig> const &hosts) : _readLen(0), _contLen(0), _totalSize(0), accumulated(0), configs(hosts), _isHeader(false) {}
 
 requestHandler::requestHandler(void) {}
 requestHandler::~requestHandler(void) {}
@@ -50,6 +50,7 @@ requestHandler::requestHandler(requestHandler const &copy)
 	buffChunks = copy.getBufChunks();
 	_totalSize = copy.getTotalSize();
 	configs = copy.getConfigs();
+	accumulated = getAccum();
 }
 
 requestHandler &requestHandler::operator=(requestHandler const &copy)
@@ -66,6 +67,7 @@ requestHandler &requestHandler::operator=(requestHandler const &copy)
 	buffChunks = copy.getBufChunks();
 	_totalSize = copy.getTotalSize();
 	configs = copy.getConfigs();
+	accumulated = copy.getAccum();
 	return *this;
 }
 
@@ -74,29 +76,38 @@ std::string const &requestHandler::getRawData(void) const { return _rawData; }
 void requestHandler::read(int const &fd)
 {
 	int readBytes = 0;
-	buffChunks.resize(BUFFER_SIZE);
+	if (buffChunks.empty())
+		buffChunks.resize(BUFFER_SIZE);
+	if (buffChunks.size() < _totalSize)
+		buffChunks.resize(_totalSize);
 	while(true)
 	{
-		if (buffChunks.size() < _totalSize)
-			buffChunks.resize(_totalSize);
-		readBytes = recv(fd, &buffChunks[_readLen], buffChunks.size() - _readLen,0);
-		if (readBytes > 0)
+		// if (static_cast<int>(buffChunks.size()) - _readLen < BUFFER_SIZE)
+		// 		buffChunks.resize(buffChunks.size() + BUFFER_SIZE);
+		if (buffChunks.size() - accumulated > 0)
 		{
-			_readLen += readBytes;
-			if (_totalSize == 0)
-				_totalSize += _readLen;
+			readBytes = recv(fd, &buffChunks[accumulated], buffChunks.size() - accumulated, 0);
+			if (readBytes > 0)
+			{
+				_readLen += readBytes;
+				accumulated += readBytes;
+				if (_totalSize == 0)
+					_totalSize += _readLen;
 		}
-		else if (readBytes == 0)
-			return;
-		else
-		{
-			if (errno == EINTR)
-				continue;
-			else if (errno == EAGAIN || errno == EWOULDBLOCK)
-				break;
+			else if (readBytes == 0)
+				throw errorHandler("Bad request read close");
 			else
-				throw errorHandler("Reading error");
+			{	
+				if (errno == EINTR)
+					continue;
+				else if (errno == EAGAIN || errno == EWOULDBLOCK)
+					break;
+				else
+					throw errorHandler("Bad request read fail");
+			}
 		}
+		else
+			break;
 	}
 }
 
@@ -171,26 +182,40 @@ bool requestHandler::isBodyHeader(std::string &h, std::string &v, std::string co
 
 void requestHandler::fillReqBody()
 {
+	 // Boundaries
 	std::string startBoundary = "--" + _endBody;
 	std::string endBoundary = "--" + _endBody + "--";
+	// Find the start boundary
 	size_t startPos = _rawData.find(startBoundary);
 	if (startPos == std::string::npos)
-		throw errorHandler("No starting boundary");
-	std::string dataAfterBoundary = _rawData.substr(startPos + startBoundary.size());
-    std::stringstream ss(dataAfterBoundary);
-	std::string token;
-	// Skip initial \r\n after boundary
-    if (ss.peek() == '\r') ss.get();
-    if (ss.peek() == '\n') ss.get();
-	//Skip headers and extract filename
-	 while (std::getline(ss, token) && !token.empty() && token != "\r") {getFileName(_request.body, token);}
-	//Read the rest of the body including end boundary
-	std::string restOfReq((std::istreambuf_iterator<char>(ss)),std::istreambuf_iterator<char>());
-	size_t stopPos = restOfReq.find(endBoundary);
-	if (stopPos == std::string::npos)
-		throw errorHandler("No ending boundary");
-	//Extract body content	
-	_request.body.content = restOfReq.substr(0, stopPos);
+		throw errorHandler("Bad request fillreqbody");
+	 size_t skipPos = startPos + startBoundary.size();
+	 // Find end of headers (\r\n\r\n)
+	size_t startBody = _rawData.find("\r\n\r\n", skipPos);
+	if (startBody == std::string::npos)
+        throw errorHandler("Bad request: headers missing");
+	 // Extract filename safely without copying entire headers
+    size_t filePos = _rawData.find("filename=", skipPos);
+    if (filePos != std::string::npos && filePos < startBody)
+    {
+        size_t fileEndPos = _rawData.find("\n", filePos + 9);
+        if (fileEndPos == std::string::npos)
+            fileEndPos = startBody;
+        _request.body.fileName = _rawData.substr(filePos + 9, fileEndPos - (filePos + 9));
+         _request.body.fileName = configUtils::trim( _request.body.fileName, " \"\r");
+    }
+	 // Calculate body start position
+	size_t bodyStart = startBody + 4;
+	// Find end boundary directly in the raw data
+    size_t stopPos = _rawData.find(endBoundary, bodyStart);
+    if (stopPos == std::string::npos)
+	{
+		throw errorHandler("Bad request: end boundary missing");
+	}
+	size_t contentLength = stopPos - bodyStart;
+	//extract body content
+	if (contentLength > 0)
+		_request.body.content.assign(_rawData, bodyStart, contentLength);
 }
 
 void requestHandler::fillReqBodyApp()
@@ -207,7 +232,7 @@ void requestHandler::fillReqBodyApp()
 void requestHandler::parse(void)
 {
 	if (_rawData.empty())
-		throw errorHandler("Bad request");
+		throw errorHandler("Bad request parse");
 	tokenize();
 	std::string token;
 	while (!_tokens.empty())
@@ -226,21 +251,20 @@ t_request const requestHandler::getReqData(void) const { return _request; }
 
 bool requestHandler::requestComplete(void)
 {
-	if (!_isHeader)
-		isHeaders();
 	if (_isHeader)
 	{
 		if (_request.method == GET || _request.method  == HEAD || _request.method  == OPTIONS || _request.method == DELETE)
 		{
 			_rawData = combine();
+			fillMethodRoute(_readHeaders);
 			return true;
 		}
 		if (doneReading())
 		{
-			setBodyEnd();
-			_rawData = combine();
 			try
 			{
+				setBodyEnd();
+				_rawData = combine();
 				if (!_endBody.empty())
 					fillReqBody();
 				else
@@ -248,8 +272,9 @@ bool requestHandler::requestComplete(void)
 			}
 			catch(const std::exception& e)
 			{
-				throw errorHandler("Bad Request");
+				throw errorHandler("Bad Request complete");
 			}
+			fillMethodRoute(_readHeaders);
 			return true;
 		}
 	}
@@ -343,39 +368,21 @@ bool requestHandler::doneReading()
 std::string requestHandler::combine()
 {
 	std::string full;
-	full.append(&buffChunks[0], _totalSize);
+	full.append(&buffChunks[0], accumulated);
     return full;
 }
 
-void requestHandler::isHeaders()
+void requestHandler::extractHeaders()
 {
 	std::string combined = combine();
 	size_t found = combined.find("\r\n\r\n");
 	if (found != std::string::npos)
 	{
 		_readHeaders = combined.substr(0, found);
-		std::string hostHeader = "Host:";
-		size_t pos = _readHeaders.find(hostHeader);
-		std::stringstream ss(_readHeaders.data() + pos + hostHeader.size() + 1);
-		std::string hostName;
-		std::getline(ss, hostName, '\n');
-		if (!hostName.empty())
-		{
-			configUtils::trim(hostName," \r\n");
-			size_t found = hostName.find(":");
-			hostName = hostName.substr(0, found);
-			if (configs.find(hostName) != configs.end())
-				_host = configs[hostName];
-			else
-				throw errorHandler("Bad Request");
-		}
 		_readLen -= static_cast<int>(found) + 4;
-		fillMethodRoute(combined);
 		setContLen();
 		if (_contLen > 0)
 			_totalSize += _contLen;
-		// if (_contLen > static_cast<size_t>(_host.getHost().maxReqBody))
-		// 	throw errorHandler("Request Entity Too Large");
 		_isHeader = true;
 	}
 }
@@ -391,3 +398,32 @@ std::vector<char> const requestHandler::getBufChunks() const {return buffChunks;
 size_t requestHandler::getTotalSize() const {return _totalSize;}
 
 std::map<std::string, serverConfig> requestHandler::getConfigs() const {return configs;}
+
+bool requestHandler::headersOk()
+{
+	if (_isHeader)
+		return true;
+	return false;
+}
+
+t_host requestHandler::setHost()
+{
+	std::string hostHeader = "Host:";
+	size_t pos = _readHeaders.find(hostHeader);
+	std::stringstream ss(_readHeaders.data() + pos + hostHeader.size() + 1);
+	std::string hostName;
+	std::getline(ss, hostName, '\n');
+	if (!hostName.empty())
+	{
+		configUtils::trim(hostName," \r\n");
+		size_t found = hostName.find(":");
+		hostName = hostName.substr(0, found);
+		if (configs.find(hostName) != configs.end())
+			_host = configs[hostName];
+		else
+			throw errorHandler("Bad Request host");
+	}
+	return _host.getHost();
+}
+
+size_t requestHandler::getAccum() const {return accumulated;}

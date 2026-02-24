@@ -21,7 +21,7 @@ s_response::s_response(void)
 	respCodes[301] = "Moved Permanently";
 	respCodes[302] = "Found";
 	respCodes[304] = "Not Modified";
-	respCodes[400] = "Bad Request";
+	respCodes[400] = "Bad request";
 	respCodes[401] = "Unauthorized";
 	respCodes[403] = "Forbidden";
 	respCodes[404] = "Not Found";
@@ -183,8 +183,7 @@ void responseHandler::runGet(void)
 	}
 	catch(const std::exception& e)
 	{
-		resp.respCode = 404;
-		throw errorHandler(FROM, "runGet " + std::string(e.what()));
+		throw errorHandler(std::string(e.what()));
 	}
 
 }
@@ -206,7 +205,6 @@ void responseHandler::runPost(void)
 					size_t found = type.find(";");
 					if (found != std::string::npos)
 						type = type.substr(0, found);
-					std::cout << type << std::endl;
 					if (type != "multipart/form-data" && !conf.checkMimeTypes(type, ext))
 						throw errorHandler("Unsupported Media Type");
 				}
