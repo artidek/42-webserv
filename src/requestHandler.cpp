@@ -124,19 +124,6 @@ void requestHandler::setBodyEnd()
 	}
 }
 
-void requestHandler::tokenize(void)
-{
-	std::stringstream ss(_rawData);
-	std::string token;
-	while (std::getline(ss, token, '\n'))
-	{
-		if (!token.empty() && token[token.size() - 1] == '\r' && token.size() > 1)
-			token = token.substr(0, token.size() - 1);
-		if (!token.empty())
-			_tokens.push(token);
-	}
-}
-
 void requestHandler::fillHeader(std::string headerProp, std::string headerVal)
 {
 	std::map<std::string, std::string>::iterator res = _headers.find(headerProp);
@@ -233,17 +220,14 @@ void requestHandler::parse(void)
 {
 	if (_rawData.empty())
 		throw errorHandler("Bad request parse");
-	tokenize();
-	std::string token;
-	while (!_tokens.empty())
+	std::stringstream ss(_readHeaders);
+	std::string headerName;
+	std::string headerVal;
+	while (std::getline(ss, headerName, ':') && std::getline(ss, headerVal))
 	{
-		token = _tokens.top();
-		_tokens.pop();
-		std::stringstream temp(token);
-		std::string headerProp;
-		std::string headerVal;
-		if (std::getline(temp, headerProp, ':') && std::getline(temp, headerVal))
-			fillHeader(headerProp, headerVal);
+		headerName = configUtils::trim(headerName, " :");
+		headerVal = configUtils::trim(headerVal, " \r\n;");
+		fillHeader(headerName, headerVal);
 	}
 }
 

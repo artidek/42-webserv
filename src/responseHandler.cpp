@@ -324,7 +324,11 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 		{
 			path = configUtils::buildPath(route.newRoot,route.page);
 			if (!request.getReqData().page.empty())
+			{
 				path = configUtils::buildPath(route.newRoot, request.getReqData().page);
+				if (!fileExist())
+					throw errorHandler(resp.respCodes[404]);
+			}
 		}
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
@@ -335,6 +339,7 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
+		std::cout << err << std::endl;
 		if (err.find("No data available") != std::string::npos)
 			resp.respCode = 500;
 		throw errorHandler(std::string(err));
@@ -579,4 +584,10 @@ bool responseHandler::allowedExt(std::string const &name, bool upload)
 	}
 	return false;
 	
+}
+
+bool responseHandler::fileExist()
+{
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0);
 }

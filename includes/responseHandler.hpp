@@ -62,6 +62,7 @@ class responseHandler
 		bool checkNone(std::string const &path);
 		bool isDir(struct stat *info, std::string const &fullPath);
 		bool allowedExt(std::string const &name, bool upload);
+		bool fileExist();
 	public:
 		responseHandler ();
 		responseHandler(requestHandler const &req);
