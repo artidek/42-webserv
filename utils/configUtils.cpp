@@ -1,5 +1,6 @@
 #include "../includes/configUtils.hpp"
 #include "../includes/errorHandler.hpp"
+#include "../includes/configParser.hpp"
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
@@ -104,13 +105,20 @@ void configUtils::concatFilePath(std::string &filePath,
 		filePath += ("/" + fileName);
 }
 
-bool configUtils::getFromStack(std::string &s,
+bool configUtils::getFromStack(std::string &name, std::string &val,
 	std::stack<std::string> &blockNames)
 {
 	if (blockNames.empty())
 		return (false);
-	std::string top = blockNames.top();
-	s = top.substr(0, top.size() - 1);
+	if (!blockNames.empty())
+		name =blockNames.top();
+	else
+		return false;
+	blockNames.pop();
+	if (!blockNames.empty())
+		val = blockNames.top();
+	else
+		return false;
 	blockNames.pop();
 	return (true);
 }
@@ -125,69 +133,63 @@ bool configUtils::onOff(std::string const &prop)
 		throw errorHandler(INVALID_INSTRUCTION, prop);
 }
 
-void configUtils::getFromList(t_route &route,
+void configUtils::getFromList(t_route &route, 
 	std::stack<std::string> &blockTokens)
 {
-	std::string setter;
+	std::string token;
 	while (!blockTokens.empty())
 	{
-		setter = blockTokens.top();
-		if (setter == "]")
+		token = blockTokens.top();
+		if (token == "end_list")
 		{
 			blockTokens.pop();
-			return ;
+			break;
 		}
-		if (setter[setter.size() - 1] == ',')
-			setter = setter.substr(0, setter.size() - 1);
-		if (setter == "GET" || setter == "HEAD" || setter == "POST"
-			|| setter == "DELETE")
-			route.methods.push_back(setter);
-		else
-			throw errorHandler(INVALID_INSTRUCTION, setter);
+		if (token != GET && token != POST && token != DELETE && token != HEAD)
+			throw errorHandler(INVALID_INSTRUCTION, token);
+		route.methods.push_back(token);
 		blockTokens.pop();
 	}
 }
 
 void	configUtils::getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens)
 {
-	std::string setter;
+	std::string token;
 	while (!blockTokens.empty())
 	{
-		setter = blockTokens.top();
-		if (setter == "]")
+		token = blockTokens.top();
+		if (token == "end_list")
 		{
 			blockTokens.pop();
-			return ;
+			break;
 		}
-		if (setter[setter.size() - 1] == ',')
-			setter = setter.substr(0, setter.size() - 1);
+		blockTokens.pop();
 		std::vector<std::string>::iterator res;
 		res = std::find(cgi.extensions.begin(), cgi.extensions.end(),
-				setter.c_str());
+				token.c_str());
 		if (res == cgi.extensions.end())
-			cgi.extensions.push_back(setter);
+			cgi.extensions.push_back(token);
 		blockTokens.pop();
 	}
 }
 
 void configUtils::getFromList(std::vector<std::string> &list, std::stack<std::string> &blockTokens)
 {
-	std::string setter;
+	std::string token;
 	while (!blockTokens.empty())
 	{
-		setter = blockTokens.top();
-		if (setter == "]")
+		token = blockTokens.top();
+		if (token == "end_list")
 		{
 			blockTokens.pop();
-			return ;
+			break;
 		}
-		if (setter[setter.size() - 1] == ',')
-			setter = setter.substr(0, setter.size() - 1);
+		blockTokens.pop();
 		std::vector<std::string>::iterator res;
 		res = std::find(list.begin(), list.end(),
-				setter.c_str());
+				token.c_str());
 		if (res == list.end())
-			list.push_back(setter);
+			list.push_back(token);
 		blockTokens.pop();
 	}
 }

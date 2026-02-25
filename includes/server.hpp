@@ -55,7 +55,7 @@ class server
 		bool badResponse(int fd, std::string  const &err);
 		void setAddresses();
 		void addToTimeLog(int fd, std::time_t sec);
-		void checkTimeout(int fd, int timeOut);
+		void checkTimeout(int fd);
 	public:
 		server(std::map<std::string, serverConfig> const &conf, char **env);
 		~server(void);

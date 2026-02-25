@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/20 11:23:55 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/25 20:25:27 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #define CONFIG_PARSER_H
 
 #include "serverConfig.hpp"
+#include <ctime>
 #include <stack>
 
 class configParser
@@ -23,8 +24,10 @@ class configParser
 	private:
 		static std::stack<std::string> tokens;
 		static std::string flattened;
+		static std::string conf;
 		static std::string blockProp;
 		static bool blockEnd;
+		static std::time_t timeout;
 		static std::map<std::string, serverConfig> hosts;
 		static std::map<std::string, void(*)(std::stack<std::string>&)>blockNames;
 		configParser(void);
@@ -38,15 +41,16 @@ class configParser
 		static void fillRoute(std::stack<std::string> &blockTokens);
 		static void fillLoc(std::stack<std::string> &blockTokens);
 		static void fillCgiConf(std::stack<std::string> &blockTokens);
-		static void listToken(int &i);
+		static void listToken(size_t &i, std::string &token);
 		static void parseBlock(void);
 		static void parseList(std::stack<std::string> &blockTokens);
-		static void startBlock(void);
 		static void checkBlock(std::stack<std::string>&blockTokens);
 		static void initBlockNames(void);
+		static void extractBlockProp(size_t &i);
 	public:
 		static void parseConfig(std::string confFile);
 		static std::map<std::string, serverConfig> getConfigs(void);
+		static bool checkBlocknames(std::string const &blockName);
 };
 
 #endif

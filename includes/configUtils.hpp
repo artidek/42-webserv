@@ -32,7 +32,7 @@ class configUtils
 		static unsigned int toNum(std::string s);
 		static void ifDir(std::string const &path);
 		static void concatFilePath(std::string &filePath, std::string const &fileName);
-		static bool getFromStack(std::string &s, std::stack<std::string> &blockNames);
+		static bool getFromStack(std::string &name, std::string &val, std::stack<std::string> &blockNames);
 		static void getFromList(t_route &route, std::stack<std::string> &blockTokens);
 		static void getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens);
 		static void getFromList(std::vector<std::string> &list, std::stack<std::string> &blockTokens);

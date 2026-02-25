@@ -268,6 +268,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
 	for (int n = 0; n < nfds; ++n)
 	{
 		int fd = events[n].data.fd;
+		checkTimeout(fd);
 		serverConfig conf;
 		if (listenSocket(fd, conf))
 		{
@@ -289,6 +290,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
 		else
 		{
 			event = events[n];
+			addToTimeLog(fd, configUtils::getTime());
 			handleClientData(fd);
 		}
 	}
@@ -368,12 +370,23 @@ void server::addToTimeLog(int fd, std::time_t sec)
 		timeLog[fd] = sec;
 }
 
-void server::checkTimeout(int fd, int timeOut)
+void server::checkTimeout(int fd)
 {
 	std::time_t now = std::time(NULL);
-	if ( now - timeLog[fd] > timeOut)
+	std::map<int, t_host>::iterator res = fdToHost.find(fd);
+	if (res != fdToHost.end())
 	{
-		timeLog.erase(fd);
-		throw errorHandler("Request Timeout");
+		std::map<int, std::time_t>::iterator resT = timeLog.find(fd);
+		if (resT != timeLog.end())
+		{
+			if (now - resT->second >= res->second.hostTimeout)
+			{
+				responseHandler badResp;
+				badResp.sendBad(408, fd);
+				closeConSock(fd);
+				pendingRequests.erase(fd);
+				timeLog.erase(fd);
+			}
+		}
 	}
 }
