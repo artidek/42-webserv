@@ -206,8 +206,7 @@ bool server::handleRequest(int const &fd)
 	}
 	catch(const std::exception& e)
 	{
-		std::cout << std::string(e.what()) << std::endl;
-		throw errorHandler("Bad request");
+		throw errorHandler(std::string(e.what()));
 	}
 	
 }

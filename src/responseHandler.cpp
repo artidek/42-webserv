@@ -339,7 +339,6 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 	catch(const std::exception& e)
 	{
 		std::string err(e.what());
-		std::cout << err << std::endl;
 		if (err.find("No data available") != std::string::npos)
 			resp.respCode = 500;
 		throw errorHandler(std::string(err));

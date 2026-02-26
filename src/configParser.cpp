@@ -252,7 +252,6 @@ void configParser::parseConfig(std::string confFile)
 		initBlockNames();
 		flatten(file);
 		tokenize();
-		std::cout << "tokenize went well\n";
 		parseBlock();
 	}
 	catch (const std::exception &e)

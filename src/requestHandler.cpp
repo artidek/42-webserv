@@ -352,6 +352,8 @@ size_t requestHandler::getContLen(void) const {return _contLen;}
 
 bool requestHandler::doneReading()
 {
+	if (_readLen > _host.getHost().maxReqBody)
+		throw errorHandler("Request Entity Too Large");
 	if (_readLen == static_cast<int>(_contLen))
 		return true;
 	return false;
