@@ -78,8 +78,6 @@ void requestHandler::read(int const &fd)
 	int readBytes = 0;
 	if (buffChunks.empty())
 		buffChunks.resize(BUFFER_SIZE);
-	if (buffChunks.size() < _totalSize)
-		buffChunks.resize(_totalSize);
 	while(true)
 	{
 		// if (static_cast<int>(buffChunks.size()) - _readLen < BUFFER_SIZE)
@@ -93,6 +91,16 @@ void requestHandler::read(int const &fd)
 				accumulated += readBytes;
 				if (_totalSize == 0)
 					_totalSize += _readLen;
+				if (!_isHeader)
+					extractHeaders();
+				if (_isHeader)
+				{
+					if (_contLen > 0)
+					{
+						if (buffChunks.size() < _totalSize)
+							buffChunks.resize(_totalSize);
+					}
+				}
 		}
 			else if (readBytes == 0)
 				throw errorHandler("Bad request read close");

@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/25 20:25:27 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/02/26 09:00:16 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,7 @@ class configParser
 		static void parseConfig(std::string confFile);
 		static std::map<std::string, serverConfig> getConfigs(void);
 		static bool checkBlocknames(std::string const &blockName);
+		static std::time_t getTimeout();
 };
 
 #endif

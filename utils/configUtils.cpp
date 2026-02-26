@@ -137,6 +137,8 @@ void configUtils::getFromList(t_route &route,
 	std::stack<std::string> &blockTokens)
 {
 	std::string token;
+	if (blockTokens.empty())
+		throw errorHandler(MISSING_PROPERTY, " in route");
 	while (!blockTokens.empty())
 	{
 		token = blockTokens.top();
@@ -155,6 +157,8 @@ void configUtils::getFromList(t_route &route,
 void	configUtils::getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens)
 {
 	std::string token;
+	if (blockTokens.empty())
+		throw errorHandler(MISSING_PROPERTY, " in cgi_config");
 	while (!blockTokens.empty())
 	{
 		token = blockTokens.top();
@@ -169,13 +173,14 @@ void	configUtils::getFromList(t_cgi &cgi, std::stack<std::string> &blockTokens)
 				token.c_str());
 		if (res == cgi.extensions.end())
 			cgi.extensions.push_back(token);
-		blockTokens.pop();
 	}
 }
 
 void configUtils::getFromList(std::vector<std::string> &list, std::stack<std::string> &blockTokens)
 {
 	std::string token;
+	if (blockTokens.empty())
+		throw errorHandler(MISSING_PROPERTY, " location");
 	while (!blockTokens.empty())
 	{
 		token = blockTokens.top();
@@ -190,7 +195,6 @@ void configUtils::getFromList(std::vector<std::string> &list, std::stack<std::st
 				token.c_str());
 		if (res == list.end())
 			list.push_back(token);
-		blockTokens.pop();
 	}
 }
 

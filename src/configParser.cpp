@@ -252,6 +252,7 @@ void configParser::parseConfig(std::string confFile)
 		initBlockNames();
 		flatten(file);
 		tokenize();
+		std::cout << "tokenize went well\n";
 		parseBlock();
 	}
 	catch (const std::exception &e)
@@ -312,3 +313,5 @@ void configParser::extractBlockProp(size_t &i)
 		throw errorHandler(std::string(e.what()));
 	}
 }
+
+std::time_t configParser::getTimeout() {return timeout;}

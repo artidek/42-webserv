@@ -253,12 +253,12 @@ void serverConfig::checkConfig()
 	
 	for (lIt = locations.begin(); lIt != locations.end(); ++lIt)
 	{
-		if (lIt->second.empty())
+		if (lIt->second.empty() || lIt->second.listExt.empty() || lIt->second.uploadExt.empty())
 		 throw errorHandler(MISSING_PROPERTY, " empty location");
 	}
 	for (rIt = routes.begin(); rIt != routes.end(); ++rIt)
 	{
-		if (rIt->second.empty())
+		if (rIt->second.empty() || rIt->second.methods.empty())
 			throw errorHandler(MISSING_PROPERTY, " empty route");
 	}
 	if(host.empty())

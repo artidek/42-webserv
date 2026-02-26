@@ -7,6 +7,8 @@ serverConfig configHandler::host;
 void configHandler::fillPorts(t_host &newHost, std::stack<std::string> &blockTokens)
 {
 	std::string token;
+	if (blockTokens.empty())
+		throw errorHandler(MISSING_PROPERTY, " in host_config");
 	try
 	{
 		while (!blockTokens.empty())
@@ -226,7 +228,10 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 					if (prop == "none")
 						loc.listExt.push_back(prop);
 					else
+					{
+						loc.listExt.push_back(prop);
 						configUtils::getFromList(loc.listExt, blockTokens);
+					}
 					count++;
 				}
 				else if (propName == "upload_ext")
@@ -234,13 +239,18 @@ void configHandler::fillLoc(std::stack<std::string> &blockTokens)
 					if (prop == "none")
 						loc.uploadExt.push_back(prop);
 					else
+					{
+						loc.uploadExt.push_back(prop);
 						configUtils::getFromList(loc.uploadExt, blockTokens);
+					}
 					count++;
 				}
+				else
+					throw errorHandler(INVALID_INSTRUCTION, propName);
 			}
 		}
 		if (count < 4)
-			throw errorHandler(MISSING_PROPERTY, "in location");
+			throw errorHandler(MISSING_PROPERTY, " location " + key);
 		if (count > 4)
 			throw errorHandler(INVALID_INSTRUCTION, "to many instructions in location");
 		if (key[key.size() - 1] != '/')
@@ -282,7 +292,13 @@ void configHandler::fillCgiConf(std::stack<std::string> &blockTokens)
 			}
 			else if (propName == "cgi_extensions")
 			{
-				configUtils::getFromList(cgi, blockTokens);
+				if (prop == "none")
+					cgi.extensions.push_back(prop);
+				else
+				{
+					cgi.extensions.push_back(prop);
+					configUtils::getFromList(cgi, blockTokens);
+				}
 				count++;
 			}
 			else

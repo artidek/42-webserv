@@ -12,7 +12,7 @@ bool server::stop = false;
 bool server::stopped = true;
 int server::epollFd = -1;
 
-server::server(std::map<std::string, serverConfig> const &conf, char **env) : configs(conf)
+server::server(std::map<std::string, serverConfig> const &conf, char **env) : configs(conf), reqTimeout(60)
 {
 	for (int i = 0; env[i]; i++)
 		envp.push_back(std::string(env[i]));
@@ -99,12 +99,13 @@ void server::setNonBlocking(int &fd)
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK); //set nonblock flag
 }
 
-void server::set()
+void server::set(std::time_t timeout)
 {
+	if (timeout > 0)
+		reqTimeout = timeout;
 	setAddresses();
 	try
 	{
-		//for (size_t i = 0; i < configs.size(); i++)
 		createSockets();
 		epollFd = epoll_create1(0);
 		if (epollFd == -1)
@@ -131,7 +132,7 @@ void server::set()
 
 void server::readyEvents(int &nfds, struct epoll_event *events)
 {
-	nfds = epoll_wait(epollFd, events, MAX_EVENTS, -1); //wait for events and put them to events buffer
+	nfds = epoll_wait(epollFd, events, MAX_EVENTS, reqTimeout * 1000); //wait for events and put them to events buffer
 	if (nfds == - 1)
 	{
 		if (!(errno == EINTR && stop))
@@ -166,7 +167,10 @@ void server::handleResponse(int const &fd, requestHandler const &req)
 		resp.createResponce(envp);
 		resp.sendResponse(fd);
 		if (resp.responseComplete())
+		{
 			closeConSock(fd);
+			timeLog.erase(fd);
+		}
 		else
 		{
 			pendingResponses[fd] = resp;
@@ -191,16 +195,10 @@ bool server::handleRequest(int const &fd)
 		if (rH.headersOk())
 		{
 			if (rH.getConfig().getHost().empty())
-			{
 				t_host host = rH.setHost();
-				if (!host.empty())
-					fdToHost[fd] = host;
-			}
 			if (rH.requestComplete())
 			{
 				rH.parse();
-				timeLog.erase(fd);
-				fdToHost.erase(fd);
 				return true;
 			}
 		}
@@ -241,6 +239,7 @@ void server::handleClientData(int const &fd)
 					disarmOut(fd);
 					closeConSock(fd);
 					pendingResponses.erase(fd);
+					timeLog.erase(fd);
 			}
 		}
 		}
@@ -264,11 +263,9 @@ void server::handleClientData(int const &fd)
 void server::proceedEvents(int const &nfds, struct epoll_event *events)
 {
 	int conn_socket;
-
 	for (int n = 0; n < nfds; ++n)
 	{
 		int fd = events[n].data.fd;
-		checkTimeout(fd);
 		serverConfig conf;
 		if (listenSocket(fd, conf))
 		{
@@ -284,16 +281,16 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);
-				//fdToHost[conn_socket] = conf;
+				addToTimeLog(conn_socket, std::time(NULL));
 			}
 		}
 		else
 		{
 			event = events[n];
-			addToTimeLog(fd, configUtils::getTime());
 			handleClientData(fd);
 		}
 	}
+	checkTimeout();
 }
 
 void server::run()
@@ -323,7 +320,6 @@ void server::closeConSock(int const &fd)
 	if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 		std::cout << "epoll_ctl_del failed\n";
 	close(fd);
-	fdToHost.erase(fd);
 }
 
 void server::handle_signal(int sig)
@@ -370,23 +366,21 @@ void server::addToTimeLog(int fd, std::time_t sec)
 		timeLog[fd] = sec;
 }
 
-void server::checkTimeout(int fd)
+void server::checkTimeout()
 {
 	std::time_t now = std::time(NULL);
-	std::map<int, t_host>::iterator res = fdToHost.find(fd);
-	if (res != fdToHost.end())
+	std::map<int, std::time_t>::iterator it;
+	for (it = timeLog.begin(); it != timeLog.end(); ++it)
 	{
-		std::map<int, std::time_t>::iterator resT = timeLog.find(fd);
-		if (resT != timeLog.end())
+		serverConfig conf;
+		if (now - it->second >= reqTimeout && !listenSocket(it->first, conf))
 		{
-			if (now - resT->second >= res->second.hostTimeout)
-			{
-				responseHandler badResp;
-				badResp.sendBad(408, fd);
-				closeConSock(fd);
-				pendingRequests.erase(fd);
-				timeLog.erase(fd);
-			}
+			responseHandler badResp;
+			badResp.sendBad(408, it->first);
+			closeConSock(it->first);
+			if (isPendingReq(it->first))
+				pendingRequests.erase(it->first);
+			timeLog.erase(it->first);
 		}
 	}
 }

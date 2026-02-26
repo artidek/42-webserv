@@ -33,6 +33,7 @@ class server
 		std::vector<std::string> envp;
 		std::set<std::pair<std::string, std::string> >uniqueAddr;
 		std::vector<int>conSockFds;
+		std::time_t reqTimeout;
 		server(void);
 		server(server const &copy);
 		server &operator=(server const &copy);
@@ -55,11 +56,11 @@ class server
 		bool badResponse(int fd, std::string  const &err);
 		void setAddresses();
 		void addToTimeLog(int fd, std::time_t sec);
-		void checkTimeout(int fd);
+		void checkTimeout();
 	public:
 		server(std::map<std::string, serverConfig> const &conf, char **env);
 		~server(void);
-		void set();
+		void set(std::time_t timeout);
 		void run();
 		static void handle_signal(int sig);
 };

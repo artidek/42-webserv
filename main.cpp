@@ -18,7 +18,7 @@ int main (int argc, char **argv, char **env)
 		{
 			configParser::parseConfig("default.conf");
 			server srv(configParser::getConfigs(), env);
-			srv.set();
+			srv.set(configParser::getTimeout());
 			srv.run();
 		}
 		catch(const std::exception& e)
@@ -33,7 +33,7 @@ int main (int argc, char **argv, char **env)
 		{
 			configParser::parseConfig(argv[1]);
 			server srv(configParser::getConfigs(), env);
-			srv.set();
+			srv.set(configParser::getTimeout());
 			srv.run();
 		}
 		catch(const std::exception& e)
