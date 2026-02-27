@@ -208,7 +208,7 @@ bool server::handleRequest(int const &fd)
 	{
 		throw errorHandler(std::string(e.what()));
 	}
-	
+
 }
 
 void server::handleClientData(int const &fd)
@@ -245,6 +245,7 @@ void server::handleClientData(int const &fd)
 		catch(const std::exception& e)
 		{
 			std::string err(e.what());
+			std::cout << err << std::endl;
 			responseHandler badResp;
 			int rc = badResp.findRespCode(err);
 			if (rc > 0)
@@ -276,7 +277,7 @@ void server::proceedEvents(int const &nfds, struct epoll_event *events)
                 if (conn_socket == -1) break;
 				setNonBlocking(conn_socket); //sets connection socket nonblocking
 				struct epoll_event ev_client;
-            	ev_client.events = EPOLLIN | EPOLLET;  
+            	ev_client.events = EPOLLIN | EPOLLET;
             	ev_client.data.fd = conn_socket;
 				if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_socket, &ev_client) == -1) // put connection socket fd to epoll on error closes connection socket throws an error
 					close(conn_socket);

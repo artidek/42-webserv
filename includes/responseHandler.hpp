@@ -4,6 +4,7 @@
 #define RESPONSE_HANDLER_H
 
 #include "serverConfig.hpp"
+#include "cgiHandler.hpp"
 
 #define SRV_NM "Server:"
 #define DT "Date:"
@@ -15,6 +16,7 @@
 #define ACPT_RNG "Accept-Ranges:"
 #define LOC "Location:"
 
+class cgiHandler;
 class requestHandler;
 
 typedef struct s_response
@@ -58,7 +60,7 @@ class responseHandler
 		std::string getExt (std::string const &path);
 		void getList();
 		void uniqueName(std::string &flName);
-		void runCgi(std::vector<std::string>env);
+		void runCgi();
 		bool checkNone(std::string const &path);
 		bool isDir(struct stat *info, std::string const &fullPath);
 		bool allowedExt(std::string const &name, bool upload);

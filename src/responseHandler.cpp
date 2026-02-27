@@ -237,7 +237,7 @@ void responseHandler::runPost(void)
 				throw errorHandler(resp.respCodes[403]);
 			}
 		}
-		
+
 	}
 	catch(const std::exception& e)
 	{
@@ -309,6 +309,7 @@ void responseHandler::isMethod(std::string &mtd)
 void responseHandler::createResponce(std::vector<std::string> const &envp)
 {
 	std::string method;
+	(void)envp;
 	try
 	{
 		conf = request.getConfig();
@@ -333,7 +334,7 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 		std::stringstream ss(route.response);
 		ss >> resp.respCode;
 		if (isCgi())
-			runCgi(envp);
+			runCgi();
 		(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
@@ -415,10 +416,19 @@ bool responseHandler::responseComplete(void) {return sendComplete;}
 
 bool responseHandler::isCgi()
 {
-	t_cgi cgiConf = conf.getCgiConf();
 	//add slash to the end if not in root or new_root
-	if (cgiConf.root != route.newRoot)
+	std::string cgiPath = conf.getCgiConf().root;
+	std::string routePath = route.newRoot;
+	if (cgiPath[cgiPath.size() - 1] != '/')
+		cgiPath += '/';
+	if (routePath[routePath.size() - 1] != '/')
+		routePath += '/';
+	if (cgiPath != routePath)
+	{
+		cgi = false;
 		return false;
+	}
+	cgi = true;
 	return true;
 }
 
@@ -531,10 +541,30 @@ std::string const responseHandler::getBuffer() const {return buffer;}
 
 bool responseHandler::getComplete() const {return sendComplete;}
 
-void responseHandler::runCgi(std::vector<std::string> env)
+void responseHandler::runCgi()
 {
-	(void)env;
-	//cgi execution goes here
+	cgiHandler cgi(conf, request.getReqData());
+	std::string page = cgi.getPage(route);
+	std::string filePath = configUtils::buildPath(route.newRoot, page);
+	if (!cgi.isCgiAllowed() || !cgi.checkPageExtension(page))
+	{
+		resp.respCode = 403;
+		throw errorHandler(resp.respCodes[403]);
+	}
+	if (!cgi.fileExist(filePath))
+	{
+		resp.respCode = 404;
+		throw errorHandler(resp.respCodes[404]);
+	}
+	cgi.setEnv(filePath);
+	cgi.run(filePath);
+	if (!cgi.isSuccess())
+	{
+		resp.respCode = 500;
+		throw errorHandler(resp.respCodes[500]);
+	}
+	buffer = cgi.getSendBuff();
+	size = buffer.size();
 }
 
 bool responseHandler::checkNone(std::string const &path)
@@ -582,7 +612,7 @@ bool responseHandler::allowedExt(std::string const &name, bool upload)
 			return true;
 	}
 	return false;
-	
+
 }
 
 bool responseHandler::fileExist()
