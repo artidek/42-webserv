@@ -50,7 +50,7 @@ class server
 		bool handleRequest(int const &fd);
 		void handleResponse(int const &fd, requestHandler const &req);
 		void closeConSock(int const &fd);
-		void stopServer();
+		void stopServer(int const &nfds, struct epoll_event *events);
 		void armOut(int fd);
 		void disarmOut(int fd);
 		bool badResponse(int fd, std::string  const &err);

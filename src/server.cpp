@@ -308,11 +308,11 @@ void server::run()
 		{
 			std::string err = "Server fatal error causing server stop: ";
 			err += e.what();
-			stopServer();
+			stopServer(nfds, events);
 			throw errorHandler(err);
 		}
 	}
-	stopServer();
+	stopServer(nfds, events);
 }
 
 void server::closeConSock(int const &fd)
@@ -328,9 +328,19 @@ void server::handle_signal(int sig)
 		stop = true;
 }
 
-void server::stopServer()
+void server::stopServer(int const &nfds, struct epoll_event *events)
 {
 	closeSfds();
+	serverConfig conf;
+	for (int i = 0; i < nfds; i++)
+	{
+		if (!listenSocket(events[i].data.fd, conf))
+			closeConSock(events[i].data.fd);
+	}
+	if (!pendingRequests.empty())
+		pendingRequests.clear();
+	if (!pendingResponses.empty())
+		pendingResponses.clear();
 	close(epollFd);
 }
 

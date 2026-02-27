@@ -21,11 +21,9 @@ void cgiHandler::setEnv(std::string const &page)
 
 void cgiHandler::prepareEnvp(void)
 {
-	char **temp = new char*[env.size() + 1];
 	for (size_t i = 0; i < env.size(); ++i)
-		temp[i] = const_cast<char*>(env[i].c_str());
-	temp[env.size()] = NULL;
-	envp = const_cast<const char**>(temp);
+		envp.push_back(const_cast<char *>(env[i].c_str()));
+	envp.push_back(NULL);
 }
 
 bool cgiHandler::isCgiAllowed() const
@@ -50,10 +48,9 @@ bool cgiHandler::checkPageExtension(std::string const &page) const
 		return false;
 	std::string ext = page.substr(page.rfind(".") + 1);
     std::vector<std::string> exts = config.getCgiConf().extensions;
-	std::vector<std::string>::const_iterator it = exts.begin();
-	for (; it != exts.end(); ++it)
+	for (size_t i = 0; i < exts.size(); i++)
 	{
-		if (*it == ext)
+		if (exts[i] == ext)
 			return true;
 	}
 	return false;
@@ -129,5 +126,5 @@ void cgiHandler::execScrypt(std::string const &path)
     argv[0] = const_cast<char*>(path.c_str());
     argv[1] = NULL;
     prepareEnvp();
-    execve(path.c_str(), argv, const_cast<char**>(envp));
+    execve(path.c_str(), argv, envp.data());
 }

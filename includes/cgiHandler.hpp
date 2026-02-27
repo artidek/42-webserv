@@ -17,7 +17,7 @@ class cgiHandler
 		t_request	request;
 		std::string sendBuff;
 		std::vector<std::string> env;
-		const char **envp;
+		std::vector<char *>envp;
 		bool success;
 		// cgiHandler(cgiHandler const &copy);
 		// cgiHandler &operator=(cgiHandler const &copy);

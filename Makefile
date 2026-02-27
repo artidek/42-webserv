@@ -1,5 +1,5 @@
 CPP = c++
-CPPFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
+CPPFLAGS = -std=c++98 -Wall -Wextra -Werror -g 
 
 SRCPATH = src/
 UTILSPATH = utils/

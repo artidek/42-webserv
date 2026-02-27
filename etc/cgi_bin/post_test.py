@@ -38,7 +38,7 @@ if not name or not message:
 
 # --- Sanitize filename ---
 safe_name = "".join(c for c in name if c.isalnum() or c in ("_", "-"))
-filename = safe_name + ".txt"
+filename = "tests/messages/" + safe_name + ".txt"
 
 # --- Save message to file ---
 try:
