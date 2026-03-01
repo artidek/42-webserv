@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   serverConfig.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
+/*   By: aobshatk <aobshatk@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/09 21:18:24 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/02/21 19:22:10 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/03/01 17:23:41 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,7 +97,7 @@ class serverConfig
 		t_host getHost(void) const;
 		std::map<std::string, t_location> getLocations(void) const;
 		std::map<std::string, t_route> getRoutes(void) const;
-		std::map<unsigned short, std::string> getErrorPages(void) const;
+		const std::map<unsigned short, std::string> &getErrorPages(void) const;
 		std::string getErrorPage(unsigned short error) const;
 		bool checkMimeTypes(std::string const &type, std::string &ext);
 		std::map<std::string, std::string> getMimeTypes() const;

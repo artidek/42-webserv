@@ -109,7 +109,7 @@ void configHandler::fillErrPg(std::stack<std::string> &blockTokens)
 		while (!blockTokens.empty())
 		{
 			if (!configUtils::getFromStack(propName, prop, blockTokens))
-				throw errorHandler(MISSING_PROPERTY, "in route");
+				throw errorHandler(MISSING_PROPERTY, "error page");
 			error = configUtils::toNum(propName);
 			host.addErrorPages(error, prop);
 		}

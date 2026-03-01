@@ -168,8 +168,8 @@ void server::handleResponse(int const &fd, requestHandler const &req)
 		resp.sendResponse(fd);
 		if (resp.responseComplete())
 		{
-			closeConSock(fd);
 			timeLog.erase(fd);
+			closeConSock(fd);
 		}
 		else
 		{
@@ -379,18 +379,27 @@ void server::addToTimeLog(int fd, std::time_t sec)
 void server::checkTimeout()
 {
 	std::time_t now = std::time(NULL);
-	std::map<int, std::time_t>::iterator it;
-	for (it = timeLog.begin(); it != timeLog.end(); ++it)
+	std::map<int, std::time_t>::iterator it = timeLog.begin();
+	std::map<int, std::time_t>::iterator temp;
+	if (!timeLog.empty())
 	{
-		serverConfig conf;
-		if (now - it->second >= reqTimeout && !listenSocket(it->first, conf))
+		for (; it != timeLog.end();)
 		{
-			responseHandler badResp;
-			badResp.sendBad(408, it->first);
-			closeConSock(it->first);
-			if (isPendingReq(it->first))
-				pendingRequests.erase(it->first);
-			timeLog.erase(it->first);
+			serverConfig conf;
+			if (now - it->second >= reqTimeout && !listenSocket(it->first, conf))
+			{
+				responseHandler badResp;
+				badResp.sendBad(408, it->first);
+				closeConSock(it->first);
+				if (isPendingReq(it->first))
+					pendingRequests.erase(it->first);
+				temp = it;
+				++it;
+				timeLog.erase(temp->first);
+
+			}
+			else
+				++it;
 		}
 	}
 }

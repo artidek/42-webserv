@@ -335,7 +335,8 @@ void responseHandler::createResponce(std::vector<std::string> const &envp)
 		ss >> resp.respCode;
 		if (isCgi())
 			runCgi();
-		(this->*runMethod[method])();
+		else
+			(this->*runMethod[method])();
 	}
 	catch(const std::exception& e)
 	{
@@ -400,6 +401,7 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 	resp.respCode = respCode;
 	resp.headers["Date:"] = configUtils::getDateTime();
 	resp.headers["Connection:"] = "close";
+	std::cout << conf.getErrorPage(404) << std::endl;
 	fillResponseBody(conf.getErrorPage(respCode));
 	std::stringstream ss;
 	ss << resp.body.size();

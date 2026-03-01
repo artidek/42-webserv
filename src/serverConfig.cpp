@@ -99,7 +99,7 @@ serverConfig& serverConfig::operator=(serverConfig const &copy)
 		cgiConf = copy.getCgiConf();
 		mimeTypes = copy.getMimeTypes();
 	}
-	
+
 	return *this;
 }
 
@@ -178,7 +178,7 @@ void serverConfig::addRoute(std::string key, t_route route)
 		throw errorHandler(INVALID_INSTRUCTION, "empty route");
 	if (key[0] != '/')
 		throw errorHandler(INVALID_INSTRUCTION, key);
-	
+
 	routes[key] = route;
 }
 
@@ -186,6 +186,7 @@ void serverConfig::setHost(t_host newHost) {host = newHost;}
 
 void serverConfig::addErrorPages(unsigned short error, std::string page)
 {
+	std::cout << page << std::endl;
 	std::stringstream ss;
 	ss << error;
 	std::map<unsigned short, std::string>::iterator res;
@@ -200,7 +201,7 @@ void serverConfig::addErrorPages(unsigned short error, std::string page)
 	{
 		throw errorHandler(WRONG_FILE, page);
 	}
-	errorPages[error] = page;
+	res->second = page;
 }
 
 t_route serverConfig::getRoute(std::string route) const
@@ -212,7 +213,7 @@ t_route serverConfig::getRoute(std::string route) const
 	res = routes.find(route);
 	if (res == routes.end())
 		throw errorHandler(NO_DATA, err);
-	
+
 	return res->second;
 }
 
@@ -226,7 +227,7 @@ std::map<std::string, t_location> serverConfig::getLocations(void) const {return
 
 std::map<std::string, t_route> serverConfig::getRoutes(void) const {return routes;}
 
-std::map<unsigned short, std::string> serverConfig::getErrorPages(void) const {return errorPages;}
+const std::map<unsigned short, std::string> &serverConfig::getErrorPages(void) const {return errorPages;}
 
 std::string serverConfig::getErrorPage(unsigned short error) const {
 
@@ -250,7 +251,7 @@ void serverConfig::checkConfig()
 {
 	std::map<std::string, t_location>::iterator lIt;
 	std::map<std::string, t_route>::iterator rIt;
-	
+
 	for (lIt = locations.begin(); lIt != locations.end(); ++lIt)
 	{
 		if (lIt->second.empty() || lIt->second.listExt.empty() || lIt->second.uploadExt.empty())
@@ -262,10 +263,10 @@ void serverConfig::checkConfig()
 			throw errorHandler(MISSING_PROPERTY, " empty route");
 	}
 	if(host.empty())
-		throw errorHandler(MISSING_PROPERTY, " emty host config"); 
+		throw errorHandler(MISSING_PROPERTY, " emty host config");
 }
 
-t_location serverConfig::getLocation(std::string location) 
+t_location serverConfig::getLocation(std::string location)
 {
 	std::map<std::string, t_location>::iterator res = locations.find(location);
 	if (res == locations.end())
