@@ -68,6 +68,7 @@ class responseHandler
 	public:
 		responseHandler ();
 		responseHandler(requestHandler const &req);
+		responseHandler(serverConfig const &conf);
 		responseHandler(responseHandler const &copy);
 		responseHandler &operator=(responseHandler const &copy);
 		~responseHandler(void);

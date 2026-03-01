@@ -195,7 +195,10 @@ bool server::handleRequest(int const &fd)
 		if (rH.headersOk())
 		{
 			if (rH.getConfig().getHost().empty())
+			{
 				t_host host = rH.setHost();
+				conf = rH.getConfig();
+			}
 			if (rH.requestComplete())
 			{
 				rH.parse();
@@ -245,8 +248,7 @@ void server::handleClientData(int const &fd)
 		catch(const std::exception& e)
 		{
 			std::string err(e.what());
-			std::cout << err << std::endl;
-			responseHandler badResp;
+			responseHandler badResp(conf);
 			int rc = badResp.findRespCode(err);
 			if (rc > 0)
 				badResp.sendBad(rc, fd);
@@ -385,10 +387,9 @@ void server::checkTimeout()
 	{
 		for (; it != timeLog.end();)
 		{
-			serverConfig conf;
 			if (now - it->second >= reqTimeout && !listenSocket(it->first, conf))
 			{
-				responseHandler badResp;
+				responseHandler badResp(conf);
 				badResp.sendBad(408, it->first);
 				closeConSock(it->first);
 				if (isPendingReq(it->first))

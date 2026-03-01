@@ -186,7 +186,6 @@ void serverConfig::setHost(t_host newHost) {host = newHost;}
 
 void serverConfig::addErrorPages(unsigned short error, std::string page)
 {
-	std::cout << page << std::endl;
 	std::stringstream ss;
 	ss << error;
 	std::map<unsigned short, std::string>::iterator res;

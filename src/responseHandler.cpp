@@ -51,6 +51,8 @@ responseHandler::responseHandler() : sendComplete(false), size(0), total(0)
 
 }
 
+responseHandler::responseHandler(serverConfig const &config) : sendComplete(false), size(0), total(0), conf(config) {}
+
 responseHandler::responseHandler(responseHandler const & copy)
 {
 	size = copy.getSize();
@@ -401,7 +403,6 @@ void responseHandler::sendBad(int const &respCode, int const &fd)
 	resp.respCode = respCode;
 	resp.headers["Date:"] = configUtils::getDateTime();
 	resp.headers["Connection:"] = "close";
-	std::cout << conf.getErrorPage(404) << std::endl;
 	fillResponseBody(conf.getErrorPage(respCode));
 	std::stringstream ss;
 	ss << resp.body.size();

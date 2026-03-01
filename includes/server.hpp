@@ -33,6 +33,7 @@ class server
 		std::vector<std::string> envp;
 		std::set<std::pair<std::string, std::string> >uniqueAddr;
 		std::vector<int>conSockFds;
+		serverConfig conf;
 		std::time_t reqTimeout;
 		server(void);
 		server(server const &copy);
