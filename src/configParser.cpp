@@ -328,7 +328,25 @@ void configParser::addConfig()
 		}
 		virtualHosts[key] = name;
 	}
-	host.checkConfig();
-	hosts[host.getHost().hostname] = host;
+	std::map<std::string, serverConfig>::iterator found = hosts.find(name);
+	if (found != hosts.end())
+		mergeConfigs(host, found->second);
+	else
+	{
+		host.checkConfig();
+		hosts[name] = host;
+	}
 	tokens.pop();
+}
+
+void configParser::mergeConfigs(serverConfig const & conf, serverConfig &origConf)
+{
+	std::map<std::string, t_location> locations = conf.getLocations();
+	std::map<std::string, t_route>routes = conf.getRoutes();
+	std::map<std::string, t_location>::iterator itL = locations.begin();
+	for (; itL != locations.end(); ++itL)
+		origConf.addLocation(itL->first, itL->second);
+	std::map<std::string, t_route>::iterator itR = routes.begin();
+	for (; itR != routes.end(); ++itR)
+		origConf.addRoute(itR->first, itR->second);
 }

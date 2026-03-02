@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/03/02 12:36:36 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/03/02 13:47:03 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,7 @@ class configParser
 		static void initBlockNames(void);
 		static void extractBlockProp(size_t &i);
 		static void addConfig();
+		static void mergeConfigs(serverConfig const &conf, serverConfig &origConf);
 	public:
 		static void parseConfig(std::string confFile);
 		static std::map<std::string, serverConfig> getConfigs(void);
