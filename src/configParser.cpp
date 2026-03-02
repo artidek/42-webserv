@@ -13,6 +13,7 @@ std::string configParser::conf;
 std::string configParser::blockProp;
 std::time_t configParser::timeout = 0;
 bool configParser::blockEnd = false;
+std::map<LookUpKey, std::string>configParser::virtualHosts;
 
 void configParser::flatten(std::ifstream const &file)
 {
@@ -215,12 +216,7 @@ void configParser::parseList(std::stack<std::string> &blockTokens)
 			else
 			{
 				if (token == "host")
-				{
-					serverConfig host = configHandler::getHost();
-					host.checkConfig();
-					hosts[host.getHost().hostname] = host;
-					tokens.pop();
-				}
+					addConfig();
 				else
 					checkBlock(blockTokens);
 			}
@@ -314,3 +310,25 @@ void configParser::extractBlockProp(size_t &i)
 }
 
 std::time_t configParser::getTimeout() {return timeout;}
+
+void configParser::addConfig()
+{
+	serverConfig host = configHandler::getHost();
+	std::vector<std::string> ports = host.getHost().ports;
+	std::string ip = host.getHost().addr;
+	std::string name = host.getHost().hostname;
+	for (size_t i = 0; i < ports.size(); i++)
+	{
+		LookUpKey key = std::make_pair(ip, ports[i]);
+		std::map<LookUpKey, std::string>::iterator res = virtualHosts.find(key);
+		if (res != virtualHosts.end())
+		{
+			if (res->second == name)
+				throw errorHandler(INVALID_INSTRUCTION, " " + ip + ":" + ports[i] + " " + name);
+		}
+		virtualHosts[key] = name;
+	}
+	host.checkConfig();
+	hosts[host.getHost().hostname] = host;
+	tokens.pop();
+}
