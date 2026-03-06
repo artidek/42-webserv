@@ -6,7 +6,7 @@
 /*   By: aobshatk <aobshatk@42warsaw.pl>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 12:37:36 by aobshatk          #+#    #+#             */
-/*   Updated: 2026/03/02 13:47:03 by aobshatk         ###   ########.fr       */
+/*   Updated: 2026/03/02 20:18:32 by aobshatk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,39 +24,40 @@ typedef std::pair<std::string, std::string> LookUpKey;
 class configParser
 {
 	private:
-		static std::stack<std::string> tokens;
-		static std::string flattened;
-		static std::string conf;
-		static std::string blockProp;
-		static bool blockEnd;
-		static std::time_t timeout;
-		static std::map<std::string, serverConfig> hosts;
-		static std::map<std::string, void(*)(std::stack<std::string>&)>blockNames;
-		static std::map<LookUpKey, std::string>virtualHosts;
-		configParser(void);
+		std::stack<std::string> tokens;
+		std::string flattened;
+		std::string conf;
+		std::string blockProp;
+		bool blockEnd;
+		std::time_t timeout;
+		std::map<std::string, serverConfig> hosts;
+		std::map<std::string, void(*)(std::stack<std::string>&)>blockNames;
+		std::map<LookUpKey, std::string>virtualHosts;
 		configParser(configParser const &copy);
 		configParser &operator=(configParser const &copy);
-		~configParser(void);
-		static void flatten(std::ifstream const &file);
-		static void tokenize(void);
-		static void fillHostConf(std::stack<std::string> &blockTokens);
-		static void fillErrPg(std::stack<std::string> &blockTokens);
-		static void fillRoute(std::stack<std::string> &blockTokens);
-		static void fillLoc(std::stack<std::string> &blockTokens);
-		static void fillCgiConf(std::stack<std::string> &blockTokens);
-		static void listToken(size_t &i, std::string &token);
-		static void parseBlock(void);
-		static void parseList(std::stack<std::string> &blockTokens);
-		static void checkBlock(std::stack<std::string>&blockTokens);
-		static void initBlockNames(void);
-		static void extractBlockProp(size_t &i);
-		static void addConfig();
-		static void mergeConfigs(serverConfig const &conf, serverConfig &origConf);
+		 void flatten(std::ifstream const &file);
+		 void tokenize(void);
+		 void fillHostConf(std::stack<std::string> &blockTokens);
+		 void fillErrPg(std::stack<std::string> &blockTokens);
+		 void fillRoute(std::stack<std::string> &blockTokens);
+		 void fillLoc(std::stack<std::string> &blockTokens);
+		 void fillCgiConf(std::stack<std::string> &blockTokens);
+		 void listToken(size_t &i, std::string &token);
+		 void parseBlock(void);
+		 void parseList(std::stack<std::string> &blockTokens);
+		 void checkBlock(std::stack<std::string>&blockTokens);
+		 void initBlockNames(void);
+		 void extractBlockProp(size_t &i);
+		 void addConfig();
+		 void mergeConfigs(serverConfig const &conf, serverConfig &origConf);
 	public:
-		static void parseConfig(std::string confFile);
-		static std::map<std::string, serverConfig> getConfigs(void);
-		static bool checkBlocknames(std::string const &blockName);
-		static std::time_t getTimeout();
+		configParser(void);
+		~configParser(void);
+		void parseConfig(std::string confFile);
+		std::map<std::string, serverConfig> getConfigs(void);
+		bool checkBlocknames(std::string const &blockName);
+		std::time_t getTimeout();
+		void clearResources();
 };
 
 #endif

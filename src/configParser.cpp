@@ -5,15 +5,10 @@
 #include "../includes/configUtils.hpp"
 #include "../includes/configHandler.hpp"
 
-std::stack<std::string> configParser::tokens;
-std::map<std::string, serverConfig> configParser::hosts;
-std::map<std::string, void (*)(std::stack<std::string> &)> configParser::blockNames;
-std::string configParser::flattened;
-std::string configParser::conf;
-std::string configParser::blockProp;
-std::time_t configParser::timeout = 0;
-bool configParser::blockEnd = false;
-std::map<LookUpKey, std::string>configParser::virtualHosts;
+
+configParser::configParser() : blockEnd(false), timeout(0) {}
+
+configParser::~configParser() {}
 
 void configParser::flatten(std::ifstream const &file)
 {
@@ -249,6 +244,7 @@ void configParser::parseConfig(std::string confFile)
 		flatten(file);
 		tokenize();
 		parseBlock();
+		file.close();
 	}
 	catch (const std::exception &e)
 	{

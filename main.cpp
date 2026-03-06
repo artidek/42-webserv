@@ -11,14 +11,15 @@ int main (int argc, char **argv, char **env)
 		std::cout << "Error: Wrong number of arguments => usage ./webserv | ./webserv [.conf]\n";
 		return 1;
 	}
+	configParser parser;
 	if (argc == 1)
 	{
 		std::signal(SIGINT, server::handle_signal);
 		try
 		{
-			configParser::parseConfig("default.conf");
-			server srv(configParser::getConfigs(), env);
-			srv.set(configParser::getTimeout());
+			parser.parseConfig("default.conf");
+			server srv(parser.getConfigs(), env);
+			srv.set(parser.getTimeout());
 			srv.run();
 		}
 		catch(const std::exception& e)
@@ -31,9 +32,9 @@ int main (int argc, char **argv, char **env)
 	{
 		try
 		{
-			configParser::parseConfig(argv[1]);
-			server srv(configParser::getConfigs(), env);
-			srv.set(configParser::getTimeout());
+			parser.parseConfig(argv[1]);
+			server srv(parser.getConfigs(), env);
+			srv.set(parser.getTimeout());
 			srv.run();
 		}
 		catch(const std::exception& e)

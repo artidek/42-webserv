@@ -314,7 +314,6 @@ void server::run()
 			throw errorHandler(err);
 		}
 	}
-	stopServer(nfds, events);
 }
 
 void server::closeConSock(int const &fd)
@@ -339,10 +338,6 @@ void server::stopServer(int const &nfds, struct epoll_event *events)
 		if (!listenSocket(events[i].data.fd, conf))
 			closeConSock(events[i].data.fd);
 	}
-	if (!pendingRequests.empty())
-		pendingRequests.clear();
-	if (!pendingResponses.empty())
-		pendingResponses.clear();
 	close(epollFd);
 }
 
