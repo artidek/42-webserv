@@ -12,9 +12,9 @@ int main (int argc, char **argv, char **env)
 		return 1;
 	}
 	configParser parser;
+	std::signal(SIGINT, server::handle_signal);
 	if (argc == 1)
 	{
-		std::signal(SIGINT, server::handle_signal);
 		try
 		{
 			parser.parseConfig("default.conf");
